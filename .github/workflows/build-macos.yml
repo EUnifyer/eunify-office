@@ -1,0 +1,51 @@
+name: Build macOS
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: build-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install autoconf automake gperf
+          brew install ccache
+          brew install openjdk@17
+          echo "JAVA_HOME=$(brew --prefix openjdk@17)" >> $GITHUB_ENV
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-macos-${{ github.sha }}
+          restore-keys: ccache-macos-
+
+      - name: Build EUnifyer Office
+        env:
+          SKIP_CLONE: false
+          CCACHE_DIR: ~/.ccache
+        run: |
+          export PATH="/usr/local/opt/ccache/libexec:$PATH"
+          ./scripts/build.sh
+
+      - name: Package
+        run: |
+          ./scripts/package-macos.sh ${{ github.ref_name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eunifyer-office-macos-${{ github.ref_name }}
+          path: dist/EUnifyer Office.app
+          retention-days: 30

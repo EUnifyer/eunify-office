@@ -1,0 +1,27 @@
+name: Build Windows
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 420
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup build environment
+        run: |
+          echo "Windows build pipeline — requires Visual Studio 2022 + Cygwin"
+          echo "See: https://wiki.documentfoundation.org/Development/BuildingOnWindows"
+          echo "TODO: Implement full Windows build steps"
+
+      # TODO: Install Cygwin, JDK, configure, build
+      # This is a placeholder — Windows builds are complex

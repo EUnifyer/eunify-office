@@ -1,0 +1,8 @@
+libreoffice/
+instdir/
+dist/
+build/
+*.dmg
+*.msi
+*.app
+.DS_Store

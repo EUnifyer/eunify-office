@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<!--
+  EUnifyer Office default overrides.
+  Drop into instdir/share/registry/ to apply.
+-->
+<oor:data xmlns:oor="http://openoffice.org/2001/registry"
+          xmlns:xs="http://www.w3.org/2001/XMLSchema"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <dependency file="main"/>
+
+  <!-- Enable NotebookBar (Tabbed Compact) by default -->
+  <oor:component-data oor:name="ToolbarMode"
+    oor:package="org.openoffice.Office.UI">
+    <node oor:name="Applications">
+      <node oor:name="Writer">
+        <prop oor:name="Active"><value>notebookbar_compact.ui</value></prop>
+      </node>
+      <node oor:name="Calc">
+        <prop oor:name="Active"><value>notebookbar_compact.ui</value></prop>
+      </node>
+      <node oor:name="Impress">
+        <prop oor:name="Active"><value>notebookbar_compact.ui</value></prop>
+      </node>
+    </node>
+  </oor:component-data>
+
+  <!-- Default save format: OOXML -->
+  <oor:component-data oor:name="Setup"
+    oor:package="org.openoffice.Setup">
+    <node oor:name="Office">
+      <node oor:name="Factories">
+        <node oor:name="com.sun.star.text.TextDocument">
+          <prop oor:name="ooSetupFactoryDefaultFilter">
+            <value>MS Word 2007 XML</value>
+          </prop>
+        </node>
+        <node oor:name="com.sun.star.sheet.SpreadsheetDocument">
+          <prop oor:name="ooSetupFactoryDefaultFilter">
+            <value>Calc MS Excel 2007 XML</value>
+          </prop>
+        </node>
+        <node oor:name="com.sun.star.presentation.PresentationDocument">
+          <prop oor:name="ooSetupFactoryDefaultFilter">
+            <value>Impress MS PowerPoint 2007 XML</value>
+          </prop>
+        </node>
+      </node>
+    </node>
+  </oor:component-data>
+
+  <!-- Auto-save every 5 minutes -->
+  <oor:component-data oor:name="Recovery"
+    oor:package="org.openoffice.Office">
+    <node oor:name="AutoSave">
+      <prop oor:name="Enabled"><value>true</value></prop>
+      <prop oor:name="TimeIntervall"><value>5</value></prop>
+    </node>
+  </oor:component-data>
+
+</oor:data>

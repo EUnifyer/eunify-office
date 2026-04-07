@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0">
+    <manifest:file-entry
+        manifest:full-path="python/auth_gate.py"
+        manifest:media-type="application/vnd.sun.star.uno-component;type=Python"/>
+</manifest:manifest>
