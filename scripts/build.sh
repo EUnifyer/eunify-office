@@ -21,7 +21,7 @@ echo "========================================"
 # 1. Clone LibreOffice if not present
 if [ "$SKIP_CLONE" != "true" ] && [ ! -d "$LO_DIR" ]; then
     echo ">> Cloning LibreOffice core..."
-    git clone --depth 1 https://git.libreoffice.org/core "$LO_DIR"
+    git clone --depth 1 https://github.com/EUnifyer/libreoffice-core.git "$LO_DIR"
 fi
 
 cd "$LO_DIR"
