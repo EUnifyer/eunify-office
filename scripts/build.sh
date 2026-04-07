@@ -7,6 +7,13 @@ LO_DIR="${ROOT_DIR}/libreoffice"
 JOBS="${1:---jobs $(sysctl -n hw.ncpu 2>/dev/null || nproc)}"
 SKIP_CLONE="${SKIP_CLONE:-false}"
 
+# macOS ships with BSD make 3.x; LibreOffice needs GNU make >= 4.2
+if command -v gmake &>/dev/null; then
+    MAKE=gmake
+else
+    MAKE=make
+fi
+
 echo "========================================"
 echo " EUnifyer Office — Build"
 echo "========================================"
@@ -19,20 +26,32 @@ fi
 
 cd "$LO_DIR"
 
+# Build environment fixups for macOS + Homebrew
+mkdir -p /tmp/lo-build-bin
+
+# GNU make >= 4.2 required (macOS ships 3.x)
+if [ "$MAKE" = "gmake" ]; then
+    ln -sf "$(which gmake)" /tmp/lo-build-bin/make
+    export PATH="/tmp/lo-build-bin:$PATH"
+fi
+
+
 # 2. Configure
 if [ ! -f config_host.mk ]; then
     echo ">> Running autogen.sh..."
+    MESON="$(python3 -c 'import shutil; print(shutil.which("meson"))')" \
     ./autogen.sh \
         --with-vendor="EUnifyer" \
         --with-product-name="EUnifyer Office" \
-        --with-icon-themes="colibre" \
+        --with-theme="colibre" \
         --without-java \
-        --enable-release-build
+        --enable-release-build \
+        --enable-bogus-pkg-config
 fi
 
 # 3. Build
-echo ">> Building (this takes 2-3h on first run)..."
-make $JOBS
+echo ">> Building with $MAKE (this takes 2-3h on first run)..."
+$MAKE $JOBS
 
 # 4. Apply branding
 echo ">> Applying EUnifyer branding..."
