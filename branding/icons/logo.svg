@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.2" baseProfile="tiny-ps"
+     xmlns="http://www.w3.org/2000/svg"
+     width="300" height="80" viewBox="0 0 300 80">
+  <title>EUnifyer Office</title>
+  <!-- Hexagon mark -->
+  <polygon points="40,4 68,20 68,48 40,64 12,48 12,20" fill="#0659E3"/>
+  <polygon points="40,14 58,24 58,44 40,54 22,44 22,24" fill="#18191A"/>
+  <polygon points="40,22 51,28 51,40 40,46 29,40 29,28" fill="#FCDF05"/>
+  <polygon points="40,31 46,34 46,42 40,45 34,42 34,34" fill="#18191A"/>
+  <!-- Wordmark -->
+  <text x="80" y="46" font-family="Inter, Helvetica Neue, Arial, sans-serif"
+        font-size="28" font-weight="700" fill="#18191A" letter-spacing="-0.5">
+    EUnifyer Office
+  </text>
+</svg>

@@ -42,6 +42,8 @@ cat > "${APP_DIR}/Contents/Info.plist" << PLIST
     <string>${VERSION}</string>
     <key>CFBundleExecutable</key>
     <string>soffice</string>
+    <key>CFBundleIconFile</key>
+    <string>main</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>
