@@ -40,37 +40,62 @@ svg_to_png() {
     fi
 }
 
+resize_png() {
+    local src="$1" out="$2" size="$3"
+    sips -z "$size" "$size" "$src" --out "$out" &>/dev/null
+}
+
+# Convert icon source to PNG at given size (SVG or PNG source)
+icon_to_png() {
+    local src="$1" out="$2" size="$3"
+    if [[ "$src" == *.svg ]]; then
+        svg_to_png "$src" "$out" "$size"
+    else
+        resize_png "$src" "$out" "$size"
+    fi
+}
+
+# Get icon source file (prefer logo-source.png for main/startcenter, SVG for others)
+get_icon_src() {
+    local app="$1"
+    local png_src="${ICONS}/logo-source.png"
+    if [[ "$app" == "main" || "$app" == "startcenter" ]] && [ -f "$png_src" ]; then
+        echo "$png_src"
+    else
+        echo "${ICONS}/${app}.svg"
+    fi
+}
+
 make_icns() {
-    local svg="$1" out="$2"
+    local src="$1" out="$2"
     local iconset="${TMPDIR}/icon.iconset"
     rm -rf "$iconset"
     mkdir -p "$iconset"
 
-    # Generate PNGs at each size and copy to iconutil naming convention
-    svg_to_png "$svg" "${iconset}/icon_16x16.png" 16
-    svg_to_png "$svg" "${iconset}/icon_16x16@2x.png" 32
-    svg_to_png "$svg" "${iconset}/icon_32x32.png" 32
-    svg_to_png "$svg" "${iconset}/icon_32x32@2x.png" 64
-    svg_to_png "$svg" "${iconset}/icon_128x128.png" 128
-    svg_to_png "$svg" "${iconset}/icon_128x128@2x.png" 256
-    svg_to_png "$svg" "${iconset}/icon_256x256.png" 256
-    svg_to_png "$svg" "${iconset}/icon_256x256@2x.png" 512
-    svg_to_png "$svg" "${iconset}/icon_512x512.png" 512
-    svg_to_png "$svg" "${iconset}/icon_512x512@2x.png" 1024
+    icon_to_png "$src" "${iconset}/icon_16x16.png" 16
+    icon_to_png "$src" "${iconset}/icon_16x16@2x.png" 32
+    icon_to_png "$src" "${iconset}/icon_32x32.png" 32
+    icon_to_png "$src" "${iconset}/icon_32x32@2x.png" 64
+    icon_to_png "$src" "${iconset}/icon_128x128.png" 128
+    icon_to_png "$src" "${iconset}/icon_128x128@2x.png" 256
+    icon_to_png "$src" "${iconset}/icon_256x256.png" 256
+    icon_to_png "$src" "${iconset}/icon_256x256@2x.png" 512
+    icon_to_png "$src" "${iconset}/icon_512x512.png" 512
+    icon_to_png "$src" "${iconset}/icon_512x512@2x.png" 1024
 
     iconutil -c icns "$iconset" -o "$out"
     rm -rf "$iconset"
 }
 
 make_ico() {
-    local svg="$1" out="$2"
+    local src="$1" out="$2"
     # ICO needs 16, 24, 32, 48, 256
     local ico_sizes=(16 24 32 48 256)
     local pngs=()
 
     for size in "${ico_sizes[@]}"; do
         local p="${TMPDIR}/ico_${size}.png"
-        svg_to_png "$svg" "$p" "$size"
+        icon_to_png "$src" "$p" "$size"
         pngs+=("$p")
     done
 
@@ -114,7 +139,7 @@ if [ -n "$APP_BUNDLE" ]; then
     RESOURCES="${APP_BUNDLE}/Contents/Resources"
     if [ -d "$RESOURCES" ]; then
         # main.icns = dock/finder icon
-        make_icns "${ICONS}/main.svg" "${RESOURCES}/main.icns"
+        make_icns "$(get_icon_src main)" "${RESOURCES}/main.icns"
         echo "   Replaced: main.icns (app icon)"
 
         # Per-component document type icons
@@ -127,7 +152,7 @@ if [ -n "$APP_BUNDLE" ]; then
             for doctype in $types; do
                 target="${RESOURCES}/${doctype}.icns"
                 if [ -f "$target" ]; then
-                    make_icns "${ICONS}/${app}.svg" "$target"
+                    make_icns "$(get_icon_src $app)" "$target"
                     echo "   Replaced: ${doctype}.icns"
                 fi
             done
@@ -150,27 +175,28 @@ if [ -d "$SYSUI" ]; then
             *)           ico_name="${app}_app.ico" ;;
         esac
         if [ -n "$ico_name" ] && [ -f "${SYSUI}/${ico_name}" ]; then
-            make_ico "${ICONS}/${app}.svg" "${SYSUI}/${ico_name}"
+            make_ico "$(get_icon_src $app)" "${SYSUI}/${ico_name}"
             echo "   Replaced: ${ico_name}"
         fi
     done
 
     # hicolor PNGs at every size
     for app in "${APPS[@]}"; do
+        src="$(get_icon_src $app)"
         for size in 16 24 32 48 64 128 256 512; do
             target="${SYSUI}/hicolor/${size}x${size}/apps/${app}.png"
             if [ -f "$target" ]; then
-                svg_to_png "${ICONS}/${app}.svg" "$target" "$size"
+                icon_to_png "$src" "$target" "$size"
             fi
         done
         # 512x512@2 = 1024px
         target="${SYSUI}/hicolor/512x512@2/apps/${app}.png"
         if [ -f "$target" ]; then
-            svg_to_png "${ICONS}/${app}.svg" "$target" 1024
+            icon_to_png "$src" "$target" 1024
         fi
-        # scalable SVG
+        # scalable SVG (only if SVG source exists)
         target="${SYSUI}/hicolor/scalable/apps/${app}.svg"
-        if [ -f "$target" ]; then
+        if [ -f "$target" ] && [ -f "${ICONS}/${app}.svg" ]; then
             cp "${ICONS}/${app}.svg" "$target"
             echo "   Replaced: scalable/apps/${app}.svg"
         fi
@@ -187,21 +213,22 @@ if [ -d "$COLIBRE" ]; then
 
     # Main app icons at various sizes
     for app in main writer calc impress; do
-        # res/<app>128.png
+        src="$(get_icon_src $app)"
         target="${COLIBRE}/res/${app}128.png"
         if [ -f "$target" ]; then
-            svg_to_png "${ICONS}/${app}.svg" "$target" 128
+            icon_to_png "$src" "$target" 128
             echo "   Replaced: res/${app}128.png"
         fi
     done
 
     # mainapp_*.png (small app icon variants)
+    main_src="$(get_icon_src main)"
     for size_name in "16:mainapp_16.png" "16:mainapp_16_8.png" "32:mainapp_32.png" "32:mainapp_32_8.png" "48:mainapp_48_8.png"; do
         size="${size_name%%:*}"
         fname="${size_name#*:}"
         target="${COLIBRE}/res/${fname}"
         if [ -f "$target" ]; then
-            svg_to_png "${ICONS}/main.svg" "$target" "$size"
+            icon_to_png "$main_src" "$target" "$size"
         fi
     done
     echo "   Replaced: res/mainapp_*.png"
@@ -209,14 +236,14 @@ if [ -d "$COLIBRE" ]; then
     # writer32.png
     target="${COLIBRE}/res/writer32.png"
     if [ -f "$target" ]; then
-        svg_to_png "${ICONS}/writer.svg" "$target" 32
+        icon_to_png "${ICONS}/writer.svg" "$target" 32
     fi
 
     # sfx2/res document previews
     for app in writer calc impress; do
         target="${COLIBRE}/sfx2/res/128x128_${app}_doc-p.png"
         if [ -f "$target" ]; then
-            svg_to_png "${ICONS}/${app}.svg" "$target" 128
+            icon_to_png "$(get_icon_src $app)" "$target" 128
             echo "   Replaced: sfx2/res/128x128_${app}_doc-p.png"
         fi
     done
@@ -239,13 +266,14 @@ if [ -d "$COLIBRE" ]; then
     fi
 
     # Splash screen (intro.png)
+    main_src="$(get_icon_src main)"
     for intro_file in "${COLIBRE}/brand/intro.png" "${COLIBRE}/brand/intro-highres.png"; do
         if [ -f "$intro_file" ]; then
             fname=$(basename "$intro_file")
             if [ "$fname" = "intro-highres.png" ]; then
-                svg_to_png "${ICONS}/main.svg" "$intro_file" 512
+                icon_to_png "$main_src" "$intro_file" 512
             else
-                svg_to_png "${ICONS}/main.svg" "$intro_file" 256
+                icon_to_png "$main_src" "$intro_file" 256
             fi
             echo "   Replaced: brand/${fname}"
         fi

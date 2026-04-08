@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg version="1.2" baseProfile="tiny-ps"
-     xmlns="http://www.w3.org/2000/svg"
-     width="512" height="512" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 18 18">
   <title>EUnifyer Slides</title>
-  <!-- Outer blue hexagon -->
-  <polygon points="256,32 460,150 460,362 256,480 52,362 52,150" fill="#0659E3"/>
-  <!-- Dark ring hexagon -->
-  <polygon points="256,100 400,183 400,329 256,412 112,329 112,183" fill="#18191A"/>
-  <!-- Yellow hexagon -->
-  <polygon points="256,150 355,207 355,317 256,374 157,317 157,207" fill="#FCDF05"/>
-  <!-- Play/presentation triangle -->
-  <polygon points="240,224 240,288 288,256" fill="#18191A"/>
+  <!-- Screen -->
+  <path d="M3.75 2C2.23079 2 1 3.23079 1 4.75V11.25C1 12.7692 2.23079 14 3.75 14H14.25C15.7692 14 17 12.7692 17 11.25V4.75C17 3.23079 15.7692 2 14.25 2H3.75Z" fill="#f97316"/>
+  <!-- Left leg -->
+  <path d="M5.7094 14H7.29054L6.46147 16.4872C6.33049 16.8801 5.90575 17.0925 5.51279 16.9615C5.11983 16.8305 4.90746 16.4058 5.03845 16.0128L5.7094 14Z" fill="#ea580c"/>
+  <!-- Right leg -->
+  <path d="M10.7094 14H12.2905L12.9614 16.0128C13.0924 16.4058 12.8801 16.8305 12.4871 16.9615C12.0941 17.0925 11.6694 16.8801 11.5384 16.4872L10.7094 14Z" fill="#ea580c"/>
+  <!-- Antenna -->
+  <path d="M9.75 1.375C9.75 0.960786 9.41421 0.625 9 0.625C8.58579 0.625 8.25 0.960786 8.25 1.375V2H9.75V1.375Z" fill="#ea580c"/>
 </svg>
