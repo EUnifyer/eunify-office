@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48">
+<svg xmlns="http://www.w3.org/2000/svg" width="210" height="48" viewBox="0 0 210 48">
   <title>EUnifyer</title>
+  <!-- Hexagon logo (inverted for dark mode) -->
   <polygon points="24,2 44,13.5 44,36.5 24,48 4,36.5 4,13.5" fill="#0659E3"/>
   <polygon points="24,9 38,17 38,33 24,41 10,33 10,17" fill="#E8E8E8"/>
   <polygon points="24,14 34,20 34,32 24,38 14,32 14,20" fill="#FCDF05"/>
   <polygon points="24,21 30,24 30,30 24,33 18,30 18,24" fill="#E8E8E8"/>
+  <!-- "EUnifyer" text (light for dark backgrounds) -->
+  <text x="54" y="32" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#E8E8E8" letter-spacing="0.5">EUnifyer</text>
 </svg>

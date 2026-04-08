@@ -257,10 +257,10 @@ if [ -d "$COLIBRE" ]; then
         cp "${ICONS}/logo_inverted.svg" "${SHELL_DIR}/logo-sc_inverted.svg"
         echo "   Replaced: brand/shell/logo*.svg"
 
-        # about.svg
+        # about.svg (square icon, not wordmark — used in welcome screen + about dialog)
         target="${SHELL_DIR}/about.svg"
         if [ -f "$target" ]; then
-            cp "${ICONS}/logo.svg" "$target"
+            cp "${ICONS}/main.svg" "$target"
             echo "   Replaced: brand/shell/about.svg"
         fi
     fi
@@ -346,7 +346,7 @@ if [ -d "$SHELL_RUNTIME" ]; then
     cp "${ICONS}/logo_inverted.svg" "${SHELL_RUNTIME}/logo_inverted.svg"
     cp "${ICONS}/logo.svg"          "${SHELL_RUNTIME}/logo-sc.svg"
     cp "${ICONS}/logo_inverted.svg" "${SHELL_RUNTIME}/logo-sc_inverted.svg"
-    cp "${ICONS}/logo.svg"          "${SHELL_RUNTIME}/about.svg"
+    cp "${ICONS}/main.svg"           "${SHELL_RUNTIME}/about.svg"
     # Remove donate assets
     rm -f "${SHELL_RUNTIME}/donate1.png" "${SHELL_RUNTIME}/donationbackground.png"
     echo "   Replaced: shell/ logos + removed donate assets"
