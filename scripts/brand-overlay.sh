@@ -10,6 +10,15 @@ ICONS="${BRANDING}/icons"
 CONFIG="${ROOT_DIR}/config"
 TMPDIR="${ROOT_DIR}/.brand-tmp"
 
+# Cross-platform sed -i (macOS needs '' arg, GNU sed does not)
+sedi() {
+    if sed --version 2>/dev/null | grep -q GNU; then
+        sed -i "$@"
+    else
+        sed -i '' "$@"
+    fi
+}
+
 # App icon names that map to our SVG sources
 # Format: "svg_name:target_name"
 APPS=(main startcenter writer calc impress)
@@ -265,48 +274,6 @@ if [ -d "$COLIBRE" ]; then
         fi
     fi
 
-    # Update icons inside images_colibre.zip (runtime icon pack)
-    COLIBRE_ZIP="${RES_DIR:-${INSTDIR}/share}/config/images_colibre.zip"
-    if [ -n "${APP_BUNDLE:-}" ]; then
-        COLIBRE_ZIP="${APP_BUNDLE}/Contents/Resources/config/images_colibre.zip"
-    fi
-    if [ -f "$COLIBRE_ZIP" ]; then
-        echo "   Updating: images_colibre.zip"
-        zip_tmp="${TMPDIR}/colibre_update"
-        rm -rf "$zip_tmp"
-        mkdir -p "${zip_tmp}/res" "${zip_tmp}/sfx2/res"
-
-        for app in main writer calc impress; do
-            src="$(get_icon_src $app)"
-            icon_to_png "$src" "${zip_tmp}/res/${app}128.png" 128
-        done
-
-        # mainapp variants
-        main_src="$(get_icon_src main)"
-        for size_name in "16:mainapp_16.png" "16:mainapp_16_8.png" "32:mainapp_32.png" "32:mainapp_32_8.png" "48:mainapp_48_8.png"; do
-            size="${size_name%%:*}"
-            fname="${size_name#*:}"
-            icon_to_png "$main_src" "${zip_tmp}/res/${fname}" "$size"
-        done
-
-        icon_to_png "${ICONS}/writer.svg" "${zip_tmp}/res/writer32.png" 32
-
-        # Start Center button icons (document-type icons next to labels)
-        icon_to_png "${ICONS}/writer.svg"  "${zip_tmp}/res/odt_32_8.png" 32
-        icon_to_png "${ICONS}/calc.svg"    "${zip_tmp}/res/ods_32_8.png" 32
-        icon_to_png "${ICONS}/impress.svg" "${zip_tmp}/res/odp_32_8.png" 32
-
-        # sfx2 doc previews
-        for app in writer calc impress; do
-            icon_to_png "$(get_icon_src $app)" "${zip_tmp}/sfx2/res/128x128_${app}_doc-p.png" 128
-        done
-
-        # Update zip in-place
-        (cd "$zip_tmp" && zip -q -u "$COLIBRE_ZIP" res/*.png sfx2/res/*.png)
-        echo "   Updated: images_colibre.zip with branded icons"
-        rm -rf "$zip_tmp"
-    fi
-
     # Splash screen (intro.png)
     main_src="$(get_icon_src main)"
     for intro_file in "${COLIBRE}/brand/intro.png" "${COLIBRE}/brand/intro-highres.png"; do
@@ -367,6 +334,51 @@ else
     REGISTRY_DIR="${INSTDIR}/share/registry"
 fi
 
+# ---------- 5b. Update images_colibre.zip (runtime icon pack) ----------
+
+# This must run after section 5 so we know the correct config path
+if [ -n "${APP_BUNDLE:-}" ]; then
+    COLIBRE_ZIP="${APP_BUNDLE}/Contents/Resources/config/images_colibre.zip"
+else
+    COLIBRE_ZIP="${INSTDIR}/share/config/images_colibre.zip"
+fi
+if [ -f "$COLIBRE_ZIP" ]; then
+    echo ""
+    echo "-- Updating images_colibre.zip"
+    zip_tmp="${TMPDIR}/colibre_update"
+    rm -rf "$zip_tmp"
+    mkdir -p "${zip_tmp}/res" "${zip_tmp}/sfx2/res"
+
+    for app in main writer calc impress; do
+        src="$(get_icon_src $app)"
+        icon_to_png "$src" "${zip_tmp}/res/${app}128.png" 128
+    done
+
+    # mainapp variants
+    main_src="$(get_icon_src main)"
+    for size_name in "16:mainapp_16.png" "16:mainapp_16_8.png" "32:mainapp_32.png" "32:mainapp_32_8.png" "48:mainapp_48_8.png"; do
+        size="${size_name%%:*}"
+        fname="${size_name#*:}"
+        icon_to_png "$main_src" "${zip_tmp}/res/${fname}" "$size"
+    done
+
+    icon_to_png "${ICONS}/writer.svg" "${zip_tmp}/res/writer32.png" 32
+
+    # Start Center button icons
+    icon_to_png "${ICONS}/writer.svg"  "${zip_tmp}/res/odt_32_8.png" 32
+    icon_to_png "${ICONS}/calc.svg"    "${zip_tmp}/res/ods_32_8.png" 32
+    icon_to_png "${ICONS}/impress.svg" "${zip_tmp}/res/odp_32_8.png" 32
+
+    # sfx2 doc previews
+    for app in writer calc impress; do
+        icon_to_png "$(get_icon_src $app)" "${zip_tmp}/sfx2/res/128x128_${app}_doc-p.png" 128
+    done
+
+    (cd "$zip_tmp" && zip -q -u "$COLIBRE_ZIP" res/*.png sfx2/res/*.png)
+    echo "   Updated: images_colibre.zip with branded icons"
+    rm -rf "$zip_tmp"
+fi
+
 # ---------- 6. Runtime branding (splash, about, logo, shell) ----------
 
 echo ""
@@ -421,11 +433,10 @@ echo "-- String replacements"
 for rcfile in bootstraprc versionrc sofficerc; do
     target="${RC_DIR}/${rcfile}"
     if [ -f "$target" ]; then
-        sed -i.bak \
+        sedi \
             -e 's/LibreOffice/EUnifyer/g' \
             -e 's/The Document Foundation/EUnifyer/g' \
             "$target"
-        rm -f "${target}.bak"
         echo "   Patched: ${rcfile}"
     fi
 done
@@ -435,8 +446,7 @@ if [ -d "$UI_DIR" ]; then
     count=0
     while IFS= read -r -d '' uifile; do
         if grep -q "LibreOffice" "$uifile" 2>/dev/null; then
-            sed -i.bak 's/LibreOffice/EUnifyer/g' "$uifile"
-            rm -f "${uifile}.bak"
+            sedi 's/LibreOffice/EUnifyer/g' "$uifile"
             count=$((count + 1))
         fi
     done < <(find "$UI_DIR" -name "*.ui" -print0)
@@ -449,12 +459,11 @@ if [ -d "$REGISTRY_DIR" ]; then
     count=0
     while IFS= read -r -d '' xcu; do
         if grep -q "LibreOffice" "$xcu" 2>/dev/null; then
-            sed -i.bak \
+            sedi \
                 -e 's/The Document Foundation/EUnifyer/g' \
                 -e 's/>LibreOffice</>EUnifyer</g' \
                 -e 's/"LibreOffice"/"EUnifyer"/g' \
                 "$xcu"
-            rm -f "${xcu}.bak"
             count=$((count + 1))
         fi
     done < <(find "$REGISTRY_DIR" -name "*.xcd" -print0)
@@ -466,12 +475,11 @@ fi
 if [ -n "${APP_BUNDLE:-}" ]; then
     PLIST="${APP_BUNDLE}/Contents/Info.plist"
     if [ -f "$PLIST" ]; then
-        sed -i.bak \
+        sedi \
             -e 's/LibreOffice/EUnifyer/g' \
             -e 's/The Document Foundation/EUnifyer/g' \
             -e 's/org\.libreoffice/com.eunifyer.office/g' \
             "$PLIST"
-        rm -f "${PLIST}.bak"
         echo "   Patched: Info.plist"
     fi
 fi
@@ -559,7 +567,7 @@ else
     exec "$SOFFICE" FACTORY_PLACEHOLDER
 fi
 LAUNCHER
-        sed -i '' \
+        sedi \
             -e "s|FLAG_PLACEHOLDER|${soffice_flag}|g" \
             -e "s|FACTORY_PLACEHOLDER|${factory_url}|g" \
             -e "s|BUNDLE_SUFFIX_PLACEHOLDER|${bundle_suffix}|g" \
@@ -602,6 +610,66 @@ PLIST
     create_wrapper_app "EUnifyer Docs"   "--writer"  "writer"  "docs"   "private:factory/swriter"
     create_wrapper_app "EUnifyer Sheets" "--calc"    "calc"    "sheets" "private:factory/scalc"
     create_wrapper_app "EUnifyer Slides" "--impress" "impress" "slides" "private:factory/simpress"
+fi
+
+# ---------- 10b. Windows launchers (.bat + .ico) ----------
+
+if [ -z "${APP_BUNDLE:-}" ] && [ -d "${INSTDIR}/program" ]; then
+    echo ""
+    echo "-- Windows/Linux launchers"
+
+    SOFFICE_BIN="soffice"
+    [ -f "${INSTDIR}/program/soffice.exe" ] && SOFFICE_BIN="soffice.exe"
+
+    create_launcher() {
+        local app_name="$1"     # e.g. "EUnifyer Docs"
+        local soffice_flag="$2" # e.g. "--writer"
+        local icon_src="$3"     # e.g. "writer"
+        local factory_url="$4"  # e.g. "private:factory/swriter"
+        local generic_name="$5" # e.g. "Word Processor"
+
+        # Windows .bat launcher
+        if [ -f "${INSTDIR}/program/soffice.exe" ]; then
+            cat > "${INSTDIR}/${app_name}.bat" << BAT
+@echo off
+start "" "%~dp0program\\soffice.exe" ${factory_url}
+BAT
+            echo "   Created: ${app_name}.bat"
+        fi
+
+        # Windows .ico (already in sysui, copy next to launcher)
+        local ico_name=""
+        case "$icon_src" in
+            writer)  ico_name="writer_app.ico" ;;
+            calc)    ico_name="calc_app.ico" ;;
+            impress) ico_name="impress_app.ico" ;;
+        esac
+        if [ -n "$ico_name" ] && [ -f "${SYSUI}/${ico_name}" ]; then
+            cp "${SYSUI}/${ico_name}" "${INSTDIR}/${app_name}.ico"
+        fi
+
+        # Linux .desktop file
+        cat > "${INSTDIR}/${app_name}.desktop" << DESKTOP
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=${app_name}
+GenericName=${generic_name}
+Comment=EUnifyer Office - ${app_name}
+Exec=${INSTDIR}/program/${SOFFICE_BIN} ${factory_url} %U
+Icon=${INSTDIR}/${app_name}.ico
+Terminal=false
+Categories=Office;
+MimeType=
+StartupNotify=true
+DESKTOP
+        chmod +x "${INSTDIR}/${app_name}.desktop"
+        echo "   Created: ${app_name}.desktop"
+    }
+
+    create_launcher "EUnifyer Docs"   "--writer"  "writer"  "private:factory/swriter"  "Word Processor"
+    create_launcher "EUnifyer Sheets" "--calc"    "calc"    "private:factory/scalc"    "Spreadsheet"
+    create_launcher "EUnifyer Slides" "--impress" "impress" "private:factory/simpress" "Presentation"
 fi
 
 # ---------- done ----------
