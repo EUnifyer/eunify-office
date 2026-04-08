@@ -482,6 +482,12 @@ if [ -n "${APP_BUNDLE:-}" ]; then
     echo ""
     echo "-- macOS wrapper apps"
 
+    # Each wrapper is a full clone of the main app bundle with:
+    # - Symlinked Contents (shared binary, frameworks, resources)
+    # - Own Info.plist (unique CFBundleIdentifier → own dock icon + Cmd+Tab)
+    # - Own .icns icon
+    # - Launcher that opens a new document via factory URL
+
     create_wrapper_app() {
         local app_name="$1"     # e.g. "EUnifyer Docs"
         local soffice_flag="$2" # e.g. "--writer"
@@ -490,18 +496,42 @@ if [ -n "${APP_BUNDLE:-}" ]; then
         local factory_url="$5"  # e.g. "private:factory/swriter"
 
         local wrapper_dir="${INSTDIR}/${app_name}.app"
+        local main_contents="${APP_BUNDLE}/Contents"
         rm -rf "$wrapper_dir"
         mkdir -p "${wrapper_dir}/Contents/MacOS"
         mkdir -p "${wrapper_dir}/Contents/Resources"
 
-        # Launcher script
+        # Symlink shared content from main app (frameworks, libraries, etc.)
+        for item in "$main_contents"/*; do
+            local name=$(basename "$item")
+            case "$name" in
+                Info.plist|MacOS|Resources) ;; # We provide our own
+                *) ln -s "$item" "${wrapper_dir}/Contents/${name}" ;;
+            esac
+        done
+
+        # Symlink all Resources from main app, we'll override the icon
+        for item in "$main_contents/Resources"/*; do
+            ln -s "$item" "${wrapper_dir}/Contents/Resources/$(basename "$item")" 2>/dev/null || true
+        done
+
+        # Generate our own .icns (overrides symlink if any)
+        if [ -f "${ICONS}/${icon_src}.svg" ]; then
+            rm -f "${wrapper_dir}/Contents/Resources/main.icns"
+            make_icns "${ICONS}/${icon_src}.svg" "${wrapper_dir}/Contents/Resources/main.icns"
+        fi
+
+        # Launcher script — wraps soffice with factory URL for new docs
+        # Uses exec to replace process, so macOS attributes the window to this bundle
         cat > "${wrapper_dir}/Contents/MacOS/launcher" << 'LAUNCHER'
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BUNDLE_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+
+# Find the real soffice binary
 SOFFICE=""
-# Look next to this wrapper app first, then standard locations
-for loc in "$SCRIPT_DIR/../../../EUnifyer.app" "$SCRIPT_DIR/../../../EUnifyerOffice.app" /Applications/EUnifyer.app ~/Applications/EUnifyer.app; do
-    if [ -d "$loc" ]; then
+for loc in "$BUNDLE_DIR/EUnifyerOffice.app" "$BUNDLE_DIR/EUnifyer.app" /Applications/EUnifyer.app ~/Applications/EUnifyer.app; do
+    if [ -x "$loc/Contents/MacOS/soffice" ]; then
         SOFFICE="$loc/Contents/MacOS/soffice"
         break
     fi
@@ -510,7 +540,8 @@ if [ -z "$SOFFICE" ]; then
     osascript -e 'display alert "EUnifyer Office not found" message "Please install EUnifyer Office first."'
     exit 1
 fi
-# Filter out macOS system args (-psn_*, -NSDocumentRevisionsDebugMode, etc.)
+
+# Filter out macOS system args
 FILES=()
 for arg in "$@"; do
     case "$arg" in
@@ -518,21 +549,24 @@ for arg in "$@"; do
         *) FILES+=("$arg") ;;
     esac
 done
+
+# Set environment so LibreOffice uses this bundle's identity
+export CFBundleIdentifier="com.eunifyer.office.BUNDLE_SUFFIX_PLACEHOLDER"
+
 if [ ${#FILES[@]} -gt 0 ]; then
     exec "$SOFFICE" FLAG_PLACEHOLDER "${FILES[@]}"
 else
     exec "$SOFFICE" FACTORY_PLACEHOLDER
 fi
 LAUNCHER
-        sed -i '' "s|FLAG_PLACEHOLDER|${soffice_flag}|g; s|FACTORY_PLACEHOLDER|${factory_url}|g" "${wrapper_dir}/Contents/MacOS/launcher"
+        sed -i '' \
+            -e "s|FLAG_PLACEHOLDER|${soffice_flag}|g" \
+            -e "s|FACTORY_PLACEHOLDER|${factory_url}|g" \
+            -e "s|BUNDLE_SUFFIX_PLACEHOLDER|${bundle_suffix}|g" \
+            "${wrapper_dir}/Contents/MacOS/launcher"
         chmod +x "${wrapper_dir}/Contents/MacOS/launcher"
 
-        # Generate .icns from SVG
-        if [ -f "${ICONS}/${icon_src}.svg" ]; then
-            make_icns "${ICONS}/${icon_src}.svg" "${wrapper_dir}/Contents/Resources/app.icns"
-        fi
-
-        # Info.plist
+        # Info.plist — unique bundle ID is what gives us a separate dock icon
         cat > "${wrapper_dir}/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -551,7 +585,7 @@ LAUNCHER
     <key>CFBundleExecutable</key>
     <string>launcher</string>
     <key>CFBundleIconFile</key>
-    <string>app</string>
+    <string>main</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>
@@ -562,7 +596,7 @@ LAUNCHER
 </plist>
 PLIST
 
-        echo "   Created: ${app_name}.app"
+        echo "   Created: ${app_name}.app (symlinked bundle, own dock identity)"
     }
 
     create_wrapper_app "EUnifyer Docs"   "--writer"  "writer"  "docs"   "private:factory/swriter"
