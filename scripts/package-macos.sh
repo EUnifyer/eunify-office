@@ -83,7 +83,7 @@ for wrapper in "EUnifyer Docs" "EUnifyer Sheets" "EUnifyer Slides"; do
     src="${INSTDIR}/${wrapper}.app"
     if [ -d "$src" ]; then
         rm -rf "${OUTPUT_DIR}/${wrapper}.app"
-        cp -R "$src" "${OUTPUT_DIR}/${wrapper}.app"
+        cp -RLa "$src" "${OUTPUT_DIR}/${wrapper}.app"
         echo "   Copied: ${wrapper}.app"
     else
         echo "   WARN: ${wrapper}.app not found in instdir — run brand-overlay.sh first"
