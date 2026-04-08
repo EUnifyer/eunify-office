@@ -21,8 +21,13 @@ rm -rf "$APP_DIR"
 mkdir -p "${APP_DIR}/Contents/MacOS"
 mkdir -p "${APP_DIR}/Contents/Resources"
 
-# Copy instdir contents
-cp -R "${INSTDIR}/"* "${APP_DIR}/Contents/"
+# Copy from the built .app bundle inside instdir
+BUILT_APP=$(find "$INSTDIR" -maxdepth 1 -name "*.app" -type d | head -1)
+if [ -z "$BUILT_APP" ]; then
+    echo "ERROR: No .app bundle found in ${INSTDIR}" >&2
+    exit 1
+fi
+cp -R "${BUILT_APP}/Contents/"* "${APP_DIR}/Contents/"
 
 # Create Info.plist
 cat > "${APP_DIR}/Contents/Info.plist" << PLIST
@@ -81,31 +86,49 @@ create_app_wrapper() {
     local soffice_flag="$2" # e.g. "--writer"
     local icon_src="$3"    # e.g. "writer"
     local bundle_suffix="$4" # e.g. "docs"
+    local factory_url="$5"  # e.g. "private:factory/swriter"
 
     local wrapper_dir="${OUTPUT_DIR}/${app_name}.app"
     rm -rf "$wrapper_dir"
     mkdir -p "${wrapper_dir}/Contents/MacOS"
     mkdir -p "${wrapper_dir}/Contents/Resources"
 
-    # Launcher script
+    # Launcher script — open a new blank document directly via factory URL
+    # macOS passes -psn_* args when launched from Finder; filter those out
     cat > "${wrapper_dir}/Contents/MacOS/launcher" << 'LAUNCHER'
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-EUNIFYER_APP="$(dirname "$SCRIPT_DIR")/../EUnifyer.app"
+SOFFICE=""
+EUNIFYER_APP="$SCRIPT_DIR/../../../EUnifyer.app"
 if [ -d "$EUNIFYER_APP" ]; then
-    exec "$EUNIFYER_APP/Contents/MacOS/soffice" FLAG_PLACEHOLDER "$@"
+    SOFFICE="$EUNIFYER_APP/Contents/MacOS/soffice"
 else
-    # Fallback: search common locations
     for loc in /Applications/EUnifyer.app ~/Applications/EUnifyer.app; do
         if [ -d "$loc" ]; then
-            exec "$loc/Contents/MacOS/soffice" FLAG_PLACEHOLDER "$@"
+            SOFFICE="$loc/Contents/MacOS/soffice"
+            break
         fi
     done
+fi
+if [ -z "$SOFFICE" ]; then
     osascript -e 'display alert "EUnifyer Office not found" message "Please install EUnifyer Office first."'
     exit 1
 fi
+# Filter out macOS system args (-psn_*, -NSDocumentRevisionsDebugMode, etc.)
+FILES=()
+for arg in "$@"; do
+    case "$arg" in
+        -psn_*|-NS*) ;;
+        *) FILES+=("$arg") ;;
+    esac
+done
+if [ ${#FILES[@]} -gt 0 ]; then
+    exec "$SOFFICE" FLAG_PLACEHOLDER "${FILES[@]}"
+else
+    exec "$SOFFICE" FACTORY_PLACEHOLDER
+fi
 LAUNCHER
-    sed -i '' "s|FLAG_PLACEHOLDER|${soffice_flag}|g" "${wrapper_dir}/Contents/MacOS/launcher"
+    sed -i '' "s|FLAG_PLACEHOLDER|${soffice_flag}|g; s|FACTORY_PLACEHOLDER|${factory_url}|g" "${wrapper_dir}/Contents/MacOS/launcher"
     chmod +x "${wrapper_dir}/Contents/MacOS/launcher"
 
     # Generate .icns from SVG if possible
@@ -159,9 +182,9 @@ PLIST
     echo "   Created: ${wrapper_dir}"
 }
 
-create_app_wrapper "EUnifyer Docs"   "--writer"  "writer"  "docs"
-create_app_wrapper "EUnifyer Sheets" "--calc"    "calc"    "sheets"
-create_app_wrapper "EUnifyer Slides" "--impress" "impress" "slides"
+create_app_wrapper "EUnifyer Docs"   "--writer"  "writer"  "docs"   "private:factory/swriter"
+create_app_wrapper "EUnifyer Sheets" "--calc"    "calc"    "sheets" "private:factory/scalc"
+create_app_wrapper "EUnifyer Slides" "--impress" "impress" "slides" "private:factory/simpress"
 
 echo ">> Packaging complete."
 echo "   App: ${APP_DIR}"

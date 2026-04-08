@@ -401,20 +401,22 @@ if [ -d "$UI_DIR" ]; then
     echo "   Patched: ${count} .ui files (LibreOffice → EUnifyer)"
 fi
 
-# .xcd registry files
+# .xcd registry files — ONLY replace user-visible display strings,
+# never internal property names (UseLibreOffice*, non-LibreOffice, etc.)
 if [ -d "$REGISTRY_DIR" ]; then
     count=0
     while IFS= read -r -d '' xcu; do
         if grep -q "LibreOffice" "$xcu" 2>/dev/null; then
             sed -i.bak \
-                -e 's/LibreOffice/EUnifyer/g' \
                 -e 's/The Document Foundation/EUnifyer/g' \
+                -e 's/>LibreOffice</>EUnifyer</g' \
+                -e 's/"LibreOffice/"EUnifyer/g' \
                 "$xcu"
             rm -f "${xcu}.bak"
             count=$((count + 1))
         fi
     done < <(find "$REGISTRY_DIR" -name "*.xcd" -print0)
-    echo "   Patched: ${count} .xcd registry files"
+    echo "   Patched: ${count} .xcd registry files (display strings only)"
 fi
 
 # ---------- 9. macOS Info.plist (if built .app exists in instdir) ----------
