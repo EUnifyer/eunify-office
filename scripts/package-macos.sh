@@ -75,119 +75,23 @@ echo "   Created: ${APP_DIR}"
 #   --apple-id "developer@eunifyer.com" \
 #   --team-id "TEAM_ID" --wait
 
-# ---------- Create separate app wrappers for Docs/Sheets/Slides ----------
+# ---------- Copy wrapper apps from instdir (created by brand-overlay.sh) ----------
 
-echo ">> Creating separate app launchers..."
+echo ">> Copying wrapper apps..."
 
-ICONS="${ROOT_DIR}/branding/icons"
-
-create_app_wrapper() {
-    local app_name="$1"    # e.g. "EUnifyer Docs"
-    local soffice_flag="$2" # e.g. "--writer"
-    local icon_src="$3"    # e.g. "writer"
-    local bundle_suffix="$4" # e.g. "docs"
-    local factory_url="$5"  # e.g. "private:factory/swriter"
-
-    local wrapper_dir="${OUTPUT_DIR}/${app_name}.app"
-    rm -rf "$wrapper_dir"
-    mkdir -p "${wrapper_dir}/Contents/MacOS"
-    mkdir -p "${wrapper_dir}/Contents/Resources"
-
-    # Launcher script — open a new blank document directly via factory URL
-    # macOS passes -psn_* args when launched from Finder; filter those out
-    cat > "${wrapper_dir}/Contents/MacOS/launcher" << 'LAUNCHER'
-#!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SOFFICE=""
-EUNIFYER_APP="$SCRIPT_DIR/../../../EUnifyer.app"
-if [ -d "$EUNIFYER_APP" ]; then
-    SOFFICE="$EUNIFYER_APP/Contents/MacOS/soffice"
-else
-    for loc in /Applications/EUnifyer.app ~/Applications/EUnifyer.app; do
-        if [ -d "$loc" ]; then
-            SOFFICE="$loc/Contents/MacOS/soffice"
-            break
-        fi
-    done
-fi
-if [ -z "$SOFFICE" ]; then
-    osascript -e 'display alert "EUnifyer Office not found" message "Please install EUnifyer Office first."'
-    exit 1
-fi
-# Filter out macOS system args (-psn_*, -NSDocumentRevisionsDebugMode, etc.)
-FILES=()
-for arg in "$@"; do
-    case "$arg" in
-        -psn_*|-NS*) ;;
-        *) FILES+=("$arg") ;;
-    esac
-done
-if [ ${#FILES[@]} -gt 0 ]; then
-    exec "$SOFFICE" FLAG_PLACEHOLDER "${FILES[@]}"
-else
-    exec "$SOFFICE" FACTORY_PLACEHOLDER
-fi
-LAUNCHER
-    sed -i '' "s|FLAG_PLACEHOLDER|${soffice_flag}|g; s|FACTORY_PLACEHOLDER|${factory_url}|g" "${wrapper_dir}/Contents/MacOS/launcher"
-    chmod +x "${wrapper_dir}/Contents/MacOS/launcher"
-
-    # Generate .icns from SVG if possible
-    local icon_name="app"
-    if [ -f "${ICONS}/${icon_src}.svg" ]; then
-        if command -v rsvg-convert &>/dev/null; then
-            local iconset="${wrapper_dir}/Contents/Resources/app.iconset"
-            mkdir -p "$iconset"
-            for s in 16 32 64 128 256 512; do
-                rsvg-convert -w "$s" -h "$s" "${ICONS}/${icon_src}.svg" -o "${iconset}/icon_${s}x${s}.png" 2>/dev/null || true
-            done
-            rsvg-convert -w 32 -h 32 "${ICONS}/${icon_src}.svg" -o "${iconset}/icon_16x16@2x.png" 2>/dev/null || true
-            rsvg-convert -w 64 -h 64 "${ICONS}/${icon_src}.svg" -o "${iconset}/icon_32x32@2x.png" 2>/dev/null || true
-            rsvg-convert -w 256 -h 256 "${ICONS}/${icon_src}.svg" -o "${iconset}/icon_128x128@2x.png" 2>/dev/null || true
-            rsvg-convert -w 512 -h 512 "${ICONS}/${icon_src}.svg" -o "${iconset}/icon_256x256@2x.png" 2>/dev/null || true
-            rsvg-convert -w 1024 -h 1024 "${ICONS}/${icon_src}.svg" -o "${iconset}/icon_512x512@2x.png" 2>/dev/null || true
-            iconutil -c icns "$iconset" -o "${wrapper_dir}/Contents/Resources/${icon_name}.icns" 2>/dev/null && rm -rf "$iconset" || rm -rf "$iconset"
-        fi
+for wrapper in "EUnifyer Docs" "EUnifyer Sheets" "EUnifyer Slides"; do
+    src="${INSTDIR}/${wrapper}.app"
+    if [ -d "$src" ]; then
+        rm -rf "${OUTPUT_DIR}/${wrapper}.app"
+        cp -R "$src" "${OUTPUT_DIR}/${wrapper}.app"
+        echo "   Copied: ${wrapper}.app"
+    else
+        echo "   WARN: ${wrapper}.app not found in instdir — run brand-overlay.sh first"
     fi
-
-    # Info.plist
-    cat > "${wrapper_dir}/Contents/Info.plist" << PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleIdentifier</key>
-    <string>${BUNDLE_ID}.${bundle_suffix}</string>
-    <key>CFBundleName</key>
-    <string>${app_name}</string>
-    <key>CFBundleDisplayName</key>
-    <string>${app_name}</string>
-    <key>CFBundleVersion</key>
-    <string>${VERSION}</string>
-    <key>CFBundleShortVersionString</key>
-    <string>${VERSION}</string>
-    <key>CFBundleExecutable</key>
-    <string>launcher</string>
-    <key>CFBundleIconFile</key>
-    <string>${icon_name}</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>12.0</string>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-</dict>
-</plist>
-PLIST
-
-    echo "   Created: ${wrapper_dir}"
-}
-
-create_app_wrapper "EUnifyer Docs"   "--writer"  "writer"  "docs"   "private:factory/swriter"
-create_app_wrapper "EUnifyer Sheets" "--calc"    "calc"    "sheets" "private:factory/scalc"
-create_app_wrapper "EUnifyer Slides" "--impress" "impress" "slides" "private:factory/simpress"
+done
 
 echo ">> Packaging complete."
-echo "   App: ${APP_DIR}"
+echo "   App:    ${APP_DIR}"
 echo "   Docs:   ${OUTPUT_DIR}/EUnifyer Docs.app"
 echo "   Sheets: ${OUTPUT_DIR}/EUnifyer Sheets.app"
 echo "   Slides: ${OUTPUT_DIR}/EUnifyer Slides.app"

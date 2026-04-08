@@ -131,7 +131,7 @@ echo ">> Generating icons from SVG sources..."
 
 # ---------- 1. macOS .icns (app bundle icon) ----------
 
-APP_BUNDLE=$(find "$INSTDIR" -maxdepth 1 -name "*.app" -type d | head -1)
+APP_BUNDLE=$(find "$INSTDIR" -maxdepth 1 -name "EUnifyer*.app" -not -name "EUnifyer Docs*" -not -name "EUnifyer Sheets*" -not -name "EUnifyer Slides*" -type d | head -1)
 if [ -n "$APP_BUNDLE" ]; then
     echo ""
     echo "-- macOS app bundle: $(basename "$APP_BUNDLE")"
@@ -263,6 +263,48 @@ if [ -d "$COLIBRE" ]; then
             cp "${ICONS}/main.svg" "$target"
             echo "   Replaced: brand/shell/about.svg"
         fi
+    fi
+
+    # Update icons inside images_colibre.zip (runtime icon pack)
+    COLIBRE_ZIP="${RES_DIR:-${INSTDIR}/share}/config/images_colibre.zip"
+    if [ -n "${APP_BUNDLE:-}" ]; then
+        COLIBRE_ZIP="${APP_BUNDLE}/Contents/Resources/config/images_colibre.zip"
+    fi
+    if [ -f "$COLIBRE_ZIP" ]; then
+        echo "   Updating: images_colibre.zip"
+        zip_tmp="${TMPDIR}/colibre_update"
+        rm -rf "$zip_tmp"
+        mkdir -p "${zip_tmp}/res" "${zip_tmp}/sfx2/res"
+
+        for app in main writer calc impress; do
+            src="$(get_icon_src $app)"
+            icon_to_png "$src" "${zip_tmp}/res/${app}128.png" 128
+        done
+
+        # mainapp variants
+        main_src="$(get_icon_src main)"
+        for size_name in "16:mainapp_16.png" "16:mainapp_16_8.png" "32:mainapp_32.png" "32:mainapp_32_8.png" "48:mainapp_48_8.png"; do
+            size="${size_name%%:*}"
+            fname="${size_name#*:}"
+            icon_to_png "$main_src" "${zip_tmp}/res/${fname}" "$size"
+        done
+
+        icon_to_png "${ICONS}/writer.svg" "${zip_tmp}/res/writer32.png" 32
+
+        # Start Center button icons (document-type icons next to labels)
+        icon_to_png "${ICONS}/writer.svg"  "${zip_tmp}/res/odt_32_8.png" 32
+        icon_to_png "${ICONS}/calc.svg"    "${zip_tmp}/res/ods_32_8.png" 32
+        icon_to_png "${ICONS}/impress.svg" "${zip_tmp}/res/odp_32_8.png" 32
+
+        # sfx2 doc previews
+        for app in writer calc impress; do
+            icon_to_png "$(get_icon_src $app)" "${zip_tmp}/sfx2/res/128x128_${app}_doc-p.png" 128
+        done
+
+        # Update zip in-place
+        (cd "$zip_tmp" && zip -q -u "$COLIBRE_ZIP" res/*.png sfx2/res/*.png)
+        echo "   Updated: images_colibre.zip with branded icons"
+        rm -rf "$zip_tmp"
     fi
 
     # Splash screen (intro.png)
@@ -410,7 +452,7 @@ if [ -d "$REGISTRY_DIR" ]; then
             sed -i.bak \
                 -e 's/The Document Foundation/EUnifyer/g' \
                 -e 's/>LibreOffice</>EUnifyer</g' \
-                -e 's/"LibreOffice/"EUnifyer/g' \
+                -e 's/"LibreOffice"/"EUnifyer"/g' \
                 "$xcu"
             rm -f "${xcu}.bak"
             count=$((count + 1))
@@ -432,6 +474,100 @@ if [ -n "${APP_BUNDLE:-}" ]; then
         rm -f "${PLIST}.bak"
         echo "   Patched: Info.plist"
     fi
+fi
+
+# ---------- 10. macOS wrapper apps (Docs, Sheets, Slides) ----------
+
+if [ -n "${APP_BUNDLE:-}" ]; then
+    echo ""
+    echo "-- macOS wrapper apps"
+
+    create_wrapper_app() {
+        local app_name="$1"     # e.g. "EUnifyer Docs"
+        local soffice_flag="$2" # e.g. "--writer"
+        local icon_src="$3"     # e.g. "writer"
+        local bundle_suffix="$4" # e.g. "docs"
+        local factory_url="$5"  # e.g. "private:factory/swriter"
+
+        local wrapper_dir="${INSTDIR}/${app_name}.app"
+        rm -rf "$wrapper_dir"
+        mkdir -p "${wrapper_dir}/Contents/MacOS"
+        mkdir -p "${wrapper_dir}/Contents/Resources"
+
+        # Launcher script
+        cat > "${wrapper_dir}/Contents/MacOS/launcher" << 'LAUNCHER'
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SOFFICE=""
+# Look next to this wrapper app first, then standard locations
+for loc in "$SCRIPT_DIR/../../../EUnifyer.app" "$SCRIPT_DIR/../../../EUnifyerOffice.app" /Applications/EUnifyer.app ~/Applications/EUnifyer.app; do
+    if [ -d "$loc" ]; then
+        SOFFICE="$loc/Contents/MacOS/soffice"
+        break
+    fi
+done
+if [ -z "$SOFFICE" ]; then
+    osascript -e 'display alert "EUnifyer Office not found" message "Please install EUnifyer Office first."'
+    exit 1
+fi
+# Filter out macOS system args (-psn_*, -NSDocumentRevisionsDebugMode, etc.)
+FILES=()
+for arg in "$@"; do
+    case "$arg" in
+        -psn_*|-NS*) ;;
+        *) FILES+=("$arg") ;;
+    esac
+done
+if [ ${#FILES[@]} -gt 0 ]; then
+    exec "$SOFFICE" FLAG_PLACEHOLDER "${FILES[@]}"
+else
+    exec "$SOFFICE" FACTORY_PLACEHOLDER
+fi
+LAUNCHER
+        sed -i '' "s|FLAG_PLACEHOLDER|${soffice_flag}|g; s|FACTORY_PLACEHOLDER|${factory_url}|g" "${wrapper_dir}/Contents/MacOS/launcher"
+        chmod +x "${wrapper_dir}/Contents/MacOS/launcher"
+
+        # Generate .icns from SVG
+        if [ -f "${ICONS}/${icon_src}.svg" ]; then
+            make_icns "${ICONS}/${icon_src}.svg" "${wrapper_dir}/Contents/Resources/app.icns"
+        fi
+
+        # Info.plist
+        cat > "${wrapper_dir}/Contents/Info.plist" << PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.eunifyer.office.${bundle_suffix}</string>
+    <key>CFBundleName</key>
+    <string>${app_name}</string>
+    <key>CFBundleDisplayName</key>
+    <string>${app_name}</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleExecutable</key>
+    <string>launcher</string>
+    <key>CFBundleIconFile</key>
+    <string>app</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>
+PLIST
+
+        echo "   Created: ${app_name}.app"
+    }
+
+    create_wrapper_app "EUnifyer Docs"   "--writer"  "writer"  "docs"   "private:factory/swriter"
+    create_wrapper_app "EUnifyer Sheets" "--calc"    "calc"    "sheets" "private:factory/scalc"
+    create_wrapper_app "EUnifyer Slides" "--impress" "impress" "slides" "private:factory/simpress"
 fi
 
 # ---------- done ----------
