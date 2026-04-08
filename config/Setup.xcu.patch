@@ -2,8 +2,8 @@
 +++ b/officecfg/registry/data/org/openoffice/Setup.xcu
 @@ Product name and vendor
 -        <prop oor:name="ooName"><value>LibreOffice</value></prop>
-+        <prop oor:name="ooName"><value>EUnifyer Office</value></prop>
++        <prop oor:name="ooName"><value>EUnifyer</value></prop>
 -        <prop oor:name="ooSetupProduct"><value>LibreOffice</value></prop>
-+        <prop oor:name="ooSetupProduct"><value>EUnifyer Office</value></prop>
++        <prop oor:name="ooSetupProduct"><value>EUnifyer</value></prop>
 -        <prop oor:name="ooVendor"><value>The Document Foundation</value></prop>
 +        <prop oor:name="ooVendor"><value>EUnifyer</value></prop>

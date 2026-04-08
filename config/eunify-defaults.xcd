@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  EUnifyer Office default overrides.
+  EUnifyer default overrides.
   Drop into instdir/share/registry/ to apply.
 -->
 <oor:data xmlns:oor="http://openoffice.org/2001/registry"

@@ -87,7 +87,7 @@ make_ico() {
 # ---------- preflight ----------
 
 echo "========================================"
-echo " EUnifyer Office — Brand Overlay"
+echo " EUnifyer — Brand Overlay"
 echo "========================================"
 echo ""
 
@@ -324,53 +324,12 @@ if [ -d "$SHELL_RUNTIME" ]; then
     echo "   Replaced: shell/ logos + removed donate assets"
 fi
 
-# Patch startcenter.ui — hide donate + extensions, keep help only
+# Copy patched startcenter.ui from source to instdir (labels + visibility already fixed in source)
+STARTCENTER_SRC="${LO_DIR}/sfx2/uiconfig/ui/startcenter.ui"
 STARTCENTER_UI="${UI_DIR}/sfx/ui/startcenter.ui"
-if [ -f "$STARTCENTER_UI" ]; then
-    # Hide extensions button
-    sed -i.bak 's/<object class="GtkButton" id="extensions">/<object class="GtkButton" id="extensions">\n                        <property name="no-show-all">True<\/property>/' "$STARTCENTER_UI"
-    rm -f "${STARTCENTER_UI}.bak"
-    sed -i.bak '/<object class="GtkButton" id="extensions">/,/<\/packing>/{
-        s/<property name="visible">True<\/property>/<property name="visible">False<\/property>/
-    }' "$STARTCENTER_UI"
-    rm -f "${STARTCENTER_UI}.bak"
-
-    # Hide donate button (ensure visible=False)
-    sed -i.bak '/<object class="GtkButton" id="donate">/,/<\/packing>/{
-        s/<property name="visible">True<\/property>/<property name="visible">False<\/property>/
-    }' "$STARTCENTER_UI"
-    rm -f "${STARTCENTER_UI}.bak"
-
-    echo "   Patched: startcenter.ui (donate + extensions hidden, help only)"
-fi
-
-# Patch help button to open feedback URL instead of built-in help
-BACKING_SRC="${LO_DIR}/sfx2/source/dialog/backingwindow.cxx"
-if [ -f "$BACKING_SRC" ]; then
-    # Replace the ClickHelpHdl to open our feedback URL
-    if grep -q "pHelp->Start" "$BACKING_SRC"; then
-        sed -i.bak '/IMPL_LINK(BackingWindow, ClickHelpHdl/,/^}/c\
-IMPL_LINK_NOARG(BackingWindow, ClickHelpHdl, weld::Button\&, void)\
-{\
-    Reference<css::system::XSystemShellExecute> const xSystemShellExecute(\
-        css::system::SystemShellExecute::create(\
-            ::comphelper::getProcessComponentContext()));\
-    xSystemShellExecute->execute(\
-        u"https://feedback.eunifyer.com/"_ustr, OUString(),\
-        css::system::SystemShellExecuteFlags::URIS_ONLY);\
-}' "$BACKING_SRC"
-        rm -f "${BACKING_SRC}.bak"
-        echo "   Patched: backingwindow.cxx (help → feedback.eunifyer.com)"
-    fi
-fi
-
-# Also patch the brand image click (VolunteerURL) to go to eunifyer.com
-if [ -f "$BACKING_SRC" ]; then
-    if grep -q "VolunteerURL" "$BACKING_SRC"; then
-        sed -i.bak 's|OUString sURL = officecfg::Office::Common::Menus::VolunteerURL::get();|OUString sURL(u"https://eunifyer.com"_ustr);|' "$BACKING_SRC"
-        rm -f "${BACKING_SRC}.bak"
-        echo "   Patched: backingwindow.cxx (brand click → eunifyer.com)"
-    fi
+if [ -f "$STARTCENTER_SRC" ] && [ -f "$STARTCENTER_UI" ]; then
+    cp "$STARTCENTER_SRC" "$STARTCENTER_UI"
+    echo "   Copied: startcenter.ui (patched labels + donate/extensions hidden)"
 fi
 
 # ---------- 7. Registry defaults ----------
@@ -393,7 +352,7 @@ for rcfile in bootstraprc versionrc sofficerc; do
     target="${RC_DIR}/${rcfile}"
     if [ -f "$target" ]; then
         sed -i.bak \
-            -e 's/LibreOffice/EUnifyer Office/g' \
+            -e 's/LibreOffice/EUnifyer/g' \
             -e 's/The Document Foundation/EUnifyer/g' \
             "$target"
         rm -f "${target}.bak"
@@ -406,12 +365,12 @@ if [ -d "$UI_DIR" ]; then
     count=0
     while IFS= read -r -d '' uifile; do
         if grep -q "LibreOffice" "$uifile" 2>/dev/null; then
-            sed -i.bak 's/LibreOffice/EUnifyer Office/g' "$uifile"
+            sed -i.bak 's/LibreOffice/EUnifyer/g' "$uifile"
             rm -f "${uifile}.bak"
             count=$((count + 1))
         fi
     done < <(find "$UI_DIR" -name "*.ui" -print0)
-    echo "   Patched: ${count} .ui files (LibreOffice → EUnifyer Office)"
+    echo "   Patched: ${count} .ui files (LibreOffice → EUnifyer)"
 fi
 
 # .xcd registry files
@@ -420,7 +379,7 @@ if [ -d "$REGISTRY_DIR" ]; then
     while IFS= read -r -d '' xcu; do
         if grep -q "LibreOffice" "$xcu" 2>/dev/null; then
             sed -i.bak \
-                -e 's/LibreOffice/EUnifyer Office/g' \
+                -e 's/LibreOffice/EUnifyer/g' \
                 -e 's/The Document Foundation/EUnifyer/g' \
                 "$xcu"
             rm -f "${xcu}.bak"
@@ -436,7 +395,7 @@ if [ -n "${APP_BUNDLE:-}" ]; then
     PLIST="${APP_BUNDLE}/Contents/Info.plist"
     if [ -f "$PLIST" ]; then
         sed -i.bak \
-            -e 's/LibreOffice/EUnifyer Office/g' \
+            -e 's/LibreOffice/EUnifyer/g' \
             -e 's/The Document Foundation/EUnifyer/g' \
             -e 's/org\.libreoffice/com.eunifyer.office/g' \
             "$PLIST"

@@ -6,12 +6,12 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 LO_DIR="${ROOT_DIR}/libreoffice"
 INSTDIR="${LO_DIR}/instdir"
 OUTPUT_DIR="${ROOT_DIR}/dist"
-APP_NAME="EUnifyer Office.app"
+APP_NAME="EUnifyer.app"
 DMG_NAME="EUnifyer-Office.dmg"
 BUNDLE_ID="com.eunifyer.office"
 VERSION="${1:-1.0.0}"
 
-echo ">> Packaging EUnifyer Office for macOS..."
+echo ">> Packaging EUnifyer for macOS..."
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -33,9 +33,9 @@ cat > "${APP_DIR}/Contents/Info.plist" << PLIST
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleName</key>
-    <string>EUnifyer Office</string>
+    <string>EUnifyer</string>
     <key>CFBundleDisplayName</key>
-    <string>EUnifyer Office</string>
+    <string>EUnifyer</string>
     <key>CFBundleVersion</key>
     <string>${VERSION}</string>
     <key>CFBundleShortVersionString</key>
@@ -58,7 +58,7 @@ echo "   Created: ${APP_DIR}"
 
 # Create DMG
 # Uncomment when ready:
-# hdiutil create -volname "EUnifyer Office" -srcfolder "$OUTPUT_DIR" \
+# hdiutil create -volname "EUnifyer" -srcfolder "$OUTPUT_DIR" \
 #   -ov -format UDZO "${OUTPUT_DIR}/${DMG_NAME}"
 # echo "   Created: ${OUTPUT_DIR}/${DMG_NAME}"
 

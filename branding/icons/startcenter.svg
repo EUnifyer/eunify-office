@@ -2,7 +2,7 @@
 <svg version="1.2" baseProfile="tiny-ps"
      xmlns="http://www.w3.org/2000/svg"
      width="512" height="512" viewBox="0 0 512 512">
-  <title>EUnifyer Office</title>
+  <title>EUnifyer</title>
   <!-- Outer blue hexagon -->
   <polygon points="256,32 460,150 460,362 256,480 52,362 52,150" fill="#0659E3"/>
   <!-- Dark ring hexagon -->

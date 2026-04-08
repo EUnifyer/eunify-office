@@ -15,7 +15,7 @@ else
 fi
 
 echo "========================================"
-echo " EUnifyer Office — Build"
+echo " EUnifyer — Build"
 echo "========================================"
 
 # 1. Clone LibreOffice if not present
@@ -42,7 +42,7 @@ if [ ! -f config_host.mk ]; then
     MESON="$(python3 -c 'import shutil; print(shutil.which("meson"))')" \
     ./autogen.sh \
         --with-vendor="EUnifyer" \
-        --with-product-name="EUnifyer Office" \
+        --with-product-name="EUnifyer" \
         --with-theme="colibre" \
         --without-java \
         --enable-release-build \

@@ -1,6 +1,6 @@
-# EUnifyer Office
+# EUnifyer
 
-Build overlay for LibreOffice Community (MPL-2.0) — rebranded as EUnifyer Office with NotebookBar (ribbon UI) enabled by default.
+Build overlay for LibreOffice Community (MPL-2.0) — rebranded as EUnifyer with NotebookBar (ribbon UI) enabled by default.
 
 ## Components
 
