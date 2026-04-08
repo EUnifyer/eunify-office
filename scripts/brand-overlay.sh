@@ -324,16 +324,53 @@ if [ -d "$SHELL_RUNTIME" ]; then
     echo "   Replaced: shell/ logos + removed donate assets"
 fi
 
-# Patch startcenter.ui — hide donate button, hide extensions button
+# Patch startcenter.ui — hide donate + extensions, keep help only
 STARTCENTER_UI="${UI_DIR}/sfx/ui/startcenter.ui"
 if [ -f "$STARTCENTER_UI" ]; then
-    # Make donate button permanently hidden
-    sed -i.bak \
-        '/<object class="GtkButton" id="donate">/,/<\/object>/{
-            s/<property name="no-show-all">True<\/property>/<property name="no-show-all">True<\/property>\n                        <property name="visible">False<\/property>/
-        }' "$STARTCENTER_UI"
+    # Hide extensions button
+    sed -i.bak 's/<object class="GtkButton" id="extensions">/<object class="GtkButton" id="extensions">\n                        <property name="no-show-all">True<\/property>/' "$STARTCENTER_UI"
     rm -f "${STARTCENTER_UI}.bak"
-    echo "   Patched: startcenter.ui (donate hidden)"
+    sed -i.bak '/<object class="GtkButton" id="extensions">/,/<\/packing>/{
+        s/<property name="visible">True<\/property>/<property name="visible">False<\/property>/
+    }' "$STARTCENTER_UI"
+    rm -f "${STARTCENTER_UI}.bak"
+
+    # Hide donate button (ensure visible=False)
+    sed -i.bak '/<object class="GtkButton" id="donate">/,/<\/packing>/{
+        s/<property name="visible">True<\/property>/<property name="visible">False<\/property>/
+    }' "$STARTCENTER_UI"
+    rm -f "${STARTCENTER_UI}.bak"
+
+    echo "   Patched: startcenter.ui (donate + extensions hidden, help only)"
+fi
+
+# Patch help button to open feedback URL instead of built-in help
+BACKING_SRC="${LO_DIR}/sfx2/source/dialog/backingwindow.cxx"
+if [ -f "$BACKING_SRC" ]; then
+    # Replace the ClickHelpHdl to open our feedback URL
+    if grep -q "pHelp->Start" "$BACKING_SRC"; then
+        sed -i.bak '/IMPL_LINK(BackingWindow, ClickHelpHdl/,/^}/c\
+IMPL_LINK_NOARG(BackingWindow, ClickHelpHdl, weld::Button\&, void)\
+{\
+    Reference<css::system::XSystemShellExecute> const xSystemShellExecute(\
+        css::system::SystemShellExecute::create(\
+            ::comphelper::getProcessComponentContext()));\
+    xSystemShellExecute->execute(\
+        u"https://feedback.eunifyer.com/"_ustr, OUString(),\
+        css::system::SystemShellExecuteFlags::URIS_ONLY);\
+}' "$BACKING_SRC"
+        rm -f "${BACKING_SRC}.bak"
+        echo "   Patched: backingwindow.cxx (help → feedback.eunifyer.com)"
+    fi
+fi
+
+# Also patch the brand image click (VolunteerURL) to go to eunifyer.com
+if [ -f "$BACKING_SRC" ]; then
+    if grep -q "VolunteerURL" "$BACKING_SRC"; then
+        sed -i.bak 's|OUString sURL = officecfg::Office::Common::Menus::VolunteerURL::get();|OUString sURL(u"https://eunifyer.com"_ustr);|' "$BACKING_SRC"
+        rm -f "${BACKING_SRC}.bak"
+        echo "   Patched: backingwindow.cxx (brand click → eunifyer.com)"
+    fi
 fi
 
 # ---------- 7. Registry defaults ----------
