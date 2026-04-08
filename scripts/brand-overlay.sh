@@ -297,7 +297,7 @@ else
     REGISTRY_DIR="${INSTDIR}/share/registry"
 fi
 
-# ---------- 6. Runtime branding (splash, about, logo) ----------
+# ---------- 6. Runtime branding (splash, about, logo, shell) ----------
 
 echo ""
 echo "-- Runtime branding"
@@ -309,6 +309,31 @@ if [ -d "$PROG_BRAND" ]; then
             echo "   Replaced: ${asset}"
         fi
     done
+fi
+
+# Shell assets (start center logo — loaded at runtime via loadBrandSvg)
+SHELL_RUNTIME="${RC_DIR}/shell"
+if [ -d "$SHELL_RUNTIME" ]; then
+    cp "${ICONS}/logo.svg"          "${SHELL_RUNTIME}/logo.svg"
+    cp "${ICONS}/logo_inverted.svg" "${SHELL_RUNTIME}/logo_inverted.svg"
+    cp "${ICONS}/logo.svg"          "${SHELL_RUNTIME}/logo-sc.svg"
+    cp "${ICONS}/logo_inverted.svg" "${SHELL_RUNTIME}/logo-sc_inverted.svg"
+    cp "${ICONS}/logo.svg"          "${SHELL_RUNTIME}/about.svg"
+    # Remove donate assets
+    rm -f "${SHELL_RUNTIME}/donate1.png" "${SHELL_RUNTIME}/donationbackground.png"
+    echo "   Replaced: shell/ logos + removed donate assets"
+fi
+
+# Patch startcenter.ui — hide donate button, hide extensions button
+STARTCENTER_UI="${UI_DIR}/sfx/ui/startcenter.ui"
+if [ -f "$STARTCENTER_UI" ]; then
+    # Make donate button permanently hidden
+    sed -i.bak \
+        '/<object class="GtkButton" id="donate">/,/<\/object>/{
+            s/<property name="no-show-all">True<\/property>/<property name="no-show-all">True<\/property>\n                        <property name="visible">False<\/property>/
+        }' "$STARTCENTER_UI"
+    rm -f "${STARTCENTER_UI}.bak"
+    echo "   Patched: startcenter.ui (donate hidden)"
 fi
 
 # ---------- 7. Registry defaults ----------
