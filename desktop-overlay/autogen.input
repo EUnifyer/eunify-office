@@ -1,0 +1,29 @@
+# EUnifyer Office — LibreOffice build configuration
+# This file is passed to ./autogen.sh via --with-input-file
+#
+# Usage:
+#   cd /path/to/libreoffice-core
+#   ./autogen.sh --with-input-file=/path/to/eunify-desktop/libreoffice/autogen.input
+
+# Branding
+--with-vendor=EUnifyer
+--with-product-name=EUnifyer Office
+
+# Only ship colibre icon theme (modern flat icons)
+--with-icon-themes=colibre
+
+# Drop Java (removes Base database app — not needed)
+--without-java
+
+# Release build (optimizations, no debug symbols)
+--enable-release-build
+
+# Disable components we don't ship
+--disable-firebird-sdbc
+--without-helppack
+
+# macOS-specific (ignored on other platforms)
+--with-macosx-code-signing-identity=-
+
+# Parallel build
+--with-parallelism

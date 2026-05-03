@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Adds EUnifyer Drive menu items to the menubar.
+  - File → EUnifyer Drive → Browse Drive
+  - File → EUnifyer Drive → Save to Drive
+-->
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry"
+                    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                    oor:name="Addons"
+                    oor:package="org.openoffice.Office">
+  <node oor:name="AddonUI">
+    <node oor:name="OfficeMenuBarMerging">
+      <node oor:name="com.eunifyer.drive" oor:op="replace">
+        <node oor:name="S1" oor:op="replace">
+          <prop oor:name="MergePoint">
+            <value>.uno:PickList\.uno:RecentDocumentList</value>
+          </prop>
+          <prop oor:name="MergeCommand">
+            <value>AddAfter</value>
+          </prop>
+          <prop oor:name="MergeFallback">
+            <value>AddPath</value>
+          </prop>
+          <node oor:name="MenuItems">
+            <node oor:name="M1" oor:op="replace">
+              <prop oor:name="Title">
+                <value xml:lang="en">EUnifyer Drive</value>
+              </prop>
+              <node oor:name="Submenu">
+                <node oor:name="M1" oor:op="replace">
+                  <prop oor:name="URL">
+                    <value>com.eunifyer.drive:Browse</value>
+                  </prop>
+                  <prop oor:name="Title">
+                    <value xml:lang="en">Browse Drive...</value>
+                  </prop>
+                </node>
+                <node oor:name="M2" oor:op="replace">
+                  <prop oor:name="URL">
+                    <value>com.eunifyer.drive:SaveToDrive</value>
+                  </prop>
+                  <prop oor:name="Title">
+                    <value xml:lang="en">Save to Drive</value>
+                  </prop>
+                </node>
+              </node>
+            </node>
+          </node>
+        </node>
+      </node>
+    </node>
+
+    <!-- Protocol handler registration -->
+    <node oor:name="OfficeProtocolHandler">
+      <node oor:name="com.eunifyer.drive.handler" oor:op="replace">
+        <prop oor:name="Protocols">
+          <value>com.eunifyer.drive:*</value>
+        </prop>
+      </node>
+    </node>
+  </node>
+</oor:component-data>

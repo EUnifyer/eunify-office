@@ -1,0 +1,3 @@
+PLACEHOLDER — Replace with actual 661×169 splash PNG.
+This file must be a real PNG image for LibreOffice to display it.
+Generate with: convert -size 661x169 xc:#1a1a2e -fill white -gravity center -pointsize 32 -annotate 0 "EUnifyer Office" intro.png

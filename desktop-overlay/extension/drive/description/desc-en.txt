@@ -1,0 +1,5 @@
+EUnifyer Drive Integration
+
+Access your EUnifyer Drive files directly from File → Open Remote.
+Browse folders, open documents, and save back to Drive.
+Works with the EUnifyer auth extension for seamless authentication.

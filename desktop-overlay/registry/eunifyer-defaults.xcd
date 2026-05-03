@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<!--
+  EUnifyer Office — Default settings override.
+  Dropped into share/registry/ to override built-in LO defaults.
+  No source modification needed — LibreOffice loads all .xcd files from this dir.
+-->
+<oor:data xmlns:oor="http://openoffice.org/2001/registry"
+          xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <dependency file="main"/>
+
+  <!-- ============================================================
+       1. NotebookBar (ribbon UI) — Tabbed Compact as default
+       ============================================================ -->
+  <oor:component-data oor:name="ToolbarMode"
+    oor:package="org.openoffice.Office.UI">
+    <node oor:name="Applications">
+      <node oor:name="Writer">
+        <prop oor:name="Active"><value>notebookbar_compact.ui</value></prop>
+      </node>
+      <node oor:name="Calc">
+        <prop oor:name="Active"><value>notebookbar_compact.ui</value></prop>
+      </node>
+      <node oor:name="Impress">
+        <prop oor:name="Active"><value>notebookbar_compact.ui</value></prop>
+      </node>
+    </node>
+  </oor:component-data>
+
+  <!-- ============================================================
+       2. Default save format — OOXML for compatibility
+       ============================================================ -->
+  <oor:component-data oor:name="Common"
+    oor:package="org.openoffice.Office">
+    <node oor:name="Save">
+      <node oor:name="Document">
+        <!-- Writer: .docx -->
+        <prop oor:name="WarnAlienFormat"><value>false</value></prop>
+      </node>
+    </node>
+    <node oor:name="Filter">
+      <node oor:name="Microsoft">
+        <node oor:name="Import">
+          <prop oor:name="WinWord"><value>true</value></prop>
+          <prop oor:name="Excel"><value>true</value></prop>
+          <prop oor:name="PowerPoint"><value>true</value></prop>
+        </node>
+      </node>
+    </node>
+  </oor:component-data>
+
+  <!-- Writer default format: MS Word 2007-365 (.docx) -->
+  <oor:component-data oor:name="Writer"
+    oor:package="org.openoffice.Office">
+    <node oor:name="DefaultTextDocument">
+      <prop oor:name="FormatName"><value>MS Word 2007 XML</value></prop>
+    </node>
+  </oor:component-data>
+
+  <!-- Calc default format: MS Excel 2007-365 (.xlsx) -->
+  <oor:component-data oor:name="Calc"
+    oor:package="org.openoffice.Office">
+    <node oor:name="DefaultSpreadsheet">
+      <prop oor:name="FormatName"><value>Calc MS Excel 2007 XML</value></prop>
+    </node>
+  </oor:component-data>
+
+  <!-- ============================================================
+       3. Auto-save — enabled, 5-minute interval
+       ============================================================ -->
+  <oor:component-data oor:name="Recovery"
+    oor:package="org.openoffice.Office">
+    <node oor:name="AutoSave">
+      <prop oor:name="Enabled"><value>true</value></prop>
+      <prop oor:name="TimeIntervall"><value>5</value></prop>
+    </node>
+  </oor:component-data>
+
+  <!-- ============================================================
+       4. Recent documents path — include sync folder
+       ============================================================ -->
+  <oor:component-data oor:name="Common"
+    oor:package="org.openoffice.Office">
+    <node oor:name="Path">
+      <node oor:name="Current">
+        <node oor:name="Work">
+          <prop oor:name="WritePath"><value>$(home)/EUnifyer</value></prop>
+        </node>
+      </node>
+    </node>
+  </oor:component-data>
+
+  <!-- ============================================================
+       5. Spell check — enabled by default
+       ============================================================ -->
+  <oor:component-data oor:name="Linguistic"
+    oor:package="org.openoffice.Office">
+    <node oor:name="SpellChecking">
+      <prop oor:name="IsSpellAuto"><value>true</value></prop>
+    </node>
+  </oor:component-data>
+
+</oor:data>

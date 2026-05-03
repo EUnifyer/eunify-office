@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<description xmlns="http://openoffice.org/extensions/description/2006"
+             xmlns:dep="http://openoffice.org/extensions/description/2006"
+             xmlns:xlink="http://www.w3.org/1999/xlink">
+  <identifier value="com.eunifyer.drive"/>
+  <version value="1.0.0"/>
+  <display-name>
+    <name lang="en">EUnifyer Drive</name>
+  </display-name>
+  <extension-description>
+    <src lang="en" xlink:href="description/desc-en.txt"/>
+  </extension-description>
+  <publisher>
+    <name lang="en" xlink:href="https://eunifyer.com">EUnifyer B.V.</name>
+  </publisher>
+  <dependencies>
+    <OpenOffice.org-minimal-version value="4.1" dep:name="OpenOffice.org 4.1"/>
+  </dependencies>
+  <platform value="all"/>
+</description>

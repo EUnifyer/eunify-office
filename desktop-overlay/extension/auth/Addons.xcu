@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Adds "EUnifyer" top-level menu with Sign Out option.
+-->
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry"
+                    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                    oor:name="Addons"
+                    oor:package="org.openoffice.Office">
+  <node oor:name="AddonUI">
+    <node oor:name="OfficeMenuBarMerging">
+      <node oor:name="com.eunifyer.auth" oor:op="replace">
+        <node oor:name="S1" oor:op="replace">
+          <prop oor:name="MergePoint">
+            <value>.uno:PickList\.uno:About</value>
+          </prop>
+          <prop oor:name="MergeCommand">
+            <value>AddBefore</value>
+          </prop>
+          <prop oor:name="MergeFallback">
+            <value>AddPath</value>
+          </prop>
+          <node oor:name="MenuItems">
+            <node oor:name="M1" oor:op="replace">
+              <prop oor:name="Title">
+                <value xml:lang="en">EUnifyer Account</value>
+              </prop>
+              <node oor:name="Submenu">
+                <node oor:name="M1" oor:op="replace">
+                  <prop oor:name="URL">
+                    <value>service:com.eunifyer.auth.SignOut</value>
+                  </prop>
+                  <prop oor:name="Title">
+                    <value xml:lang="en">Sign Out</value>
+                  </prop>
+                </node>
+              </node>
+            </node>
+          </node>
+        </node>
+      </node>
+    </node>
+  </node>
+</oor:component-data>

@@ -1,0 +1,5 @@
+EUnifyer Authentication Gate
+
+Requires EUnifyer account sign-in to use the application.
+Reads authentication tokens from the shared OS keychain
+(written by EUnifyer Desktop or via in-app OIDC login).
