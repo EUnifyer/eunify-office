@@ -327,7 +327,7 @@ if [ -n "${APP_BUNDLE:-}" ] && [ -d "${APP_BUNDLE}/Contents/Resources" ]; then
     RC_DIR="$RES_DIR"
     UI_DIR="${RES_DIR}/config/soffice.cfg"
     REGISTRY_DIR="${RES_DIR}/registry"
-    FONTS_DIR="${RES_DIR}/fonts"
+    FONTS_DIR="${RES_DIR}/fonts/truetype"   # the scanned font dir (alongside Carlito/Liberation)
     TEMPLATE_DIR="${RES_DIR}/template/common/eunifyer"
 else
     PROG_BRAND="${INSTDIR}/program/brand"
