@@ -35,6 +35,21 @@ if [ "$MAKE" = "gmake" ]; then
     export PATH="/tmp/lo-build-bin:$PATH"
 fi
 
+# The bundled afdko (font toolkit) #includes <libxml/tree.h> without adding an
+# include path. On macOS libxml2 lives under the SDK (and/or Homebrew) in a
+# libxml2/ subdir, so expose it via CPATH for every clang invocation.
+if [ "$(uname)" = "Darwin" ]; then
+    _libxml_paths=""
+    _sdk="$(xcrun --show-sdk-path 2>/dev/null || true)"
+    [ -d "${_sdk}/usr/include/libxml2" ] && _libxml_paths="${_sdk}/usr/include/libxml2"
+    if command -v brew &>/dev/null; then
+        _brew_xml="$(brew --prefix libxml2 2>/dev/null || true)/include/libxml2"
+        [ -d "$_brew_xml" ] && _libxml_paths="${_libxml_paths:+$_libxml_paths:}$_brew_xml"
+    fi
+    [ -n "$_libxml_paths" ] && export CPATH="${_libxml_paths}${CPATH:+:$CPATH}"
+    echo ">> CPATH=${CPATH:-<unset>}"
+fi
+
 
 # 2. Configure
 if [ ! -f config_host.mk ]; then
