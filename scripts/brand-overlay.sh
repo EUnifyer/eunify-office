@@ -328,12 +328,14 @@ if [ -n "${APP_BUNDLE:-}" ] && [ -d "${APP_BUNDLE}/Contents/Resources" ]; then
     UI_DIR="${RES_DIR}/config/soffice.cfg"
     REGISTRY_DIR="${RES_DIR}/registry"
     FONTS_DIR="${RES_DIR}/fonts"
+    TEMPLATE_DIR="${RES_DIR}/template/common/eunifyer"
 else
     PROG_BRAND="${INSTDIR}/program/brand"
     RC_DIR="${INSTDIR}/program"
     UI_DIR="${INSTDIR}/share/config/soffice.cfg"
     REGISTRY_DIR="${INSTDIR}/share/registry"
     FONTS_DIR="${INSTDIR}/share/fonts/truetype"
+    TEMPLATE_DIR="${INSTDIR}/share/template/common/eunifyer"
 fi
 
 # ---------- 5a. Bundle EUnifyer brand fonts (DM Sans) ----------
@@ -345,6 +347,16 @@ if ls "${BRAND_FONTS}"/*.ttf >/dev/null 2>&1; then
     mkdir -p "$FONTS_DIR"
     cp "${BRAND_FONTS}"/*.ttf "$FONTS_DIR/"
     echo "   Bundled brand fonts (DM Sans) → ${FONTS_DIR#${ROOT_DIR}/}"
+fi
+
+# ---------- 5a-bis. Bundle default templates (DM Sans Calc/Impress) ----------
+# Calc/Impress have no default-font setting, so ship default templates that the
+# Setup factories point at (ooSetupFactoryTemplateFile in eunify-defaults.xcd).
+BRAND_TEMPLATES="${BRANDING}/templates"
+if ls "${BRAND_TEMPLATES}"/*.ot? >/dev/null 2>&1; then
+    mkdir -p "$TEMPLATE_DIR"
+    cp "${BRAND_TEMPLATES}"/*.ot? "$TEMPLATE_DIR/"
+    echo "   Bundled default templates → ${TEMPLATE_DIR#${ROOT_DIR}/}"
 fi
 
 # ---------- 5b. Update images_colibre.zip (runtime icon pack) ----------
