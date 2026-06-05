@@ -26,8 +26,10 @@ jobs:
       - name: Install dependencies
         run: |
           # GNU make >= 4.2 (brew's `make` provides `gmake`; macOS ships 3.81),
-          # plus the autotools LibreOffice's autogen.sh needs.
-          brew install autoconf automake gperf make
+          # the autotools LibreOffice's autogen.sh needs, plus meson+ninja which
+          # several bundled externals (harfbuzz, …) build with — build.sh passes
+          # MESON=$(which meson); without it that resolves to "None".
+          brew install autoconf automake gperf make meson ninja
           brew install ccache
           brew install openjdk@17
           echo "JAVA_HOME=$(brew --prefix openjdk@17)" >> $GITHUB_ENV

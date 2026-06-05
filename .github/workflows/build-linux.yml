@@ -30,6 +30,7 @@ jobs:
             build-essential git ccache zip \
             gcc-12 g++-12 \
             autoconf automake libtool pkg-config gperf \
+            meson ninja-build \
             bison flex nasm \
             openjdk-17-jdk ant junit4 \
             libxml2-utils xsltproc libxslt1-dev \
