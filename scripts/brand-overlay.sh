@@ -490,11 +490,11 @@ if [ -n "${APP_BUNDLE:-}" ]; then
     echo ""
     echo "-- macOS wrapper apps"
 
-    # Each wrapper is a full clone of the main app bundle with:
-    # - Symlinked Contents (shared binary, frameworks, resources)
+    # Each wrapper is a full STANDALONE clone of the main app bundle with:
+    # - Its own copy of the program/frameworks/resources (runs independently)
     # - Own Info.plist (unique CFBundleIdentifier → own dock icon + Cmd+Tab)
     # - Own .icns icon
-    # - Launcher that opens a new document via factory URL
+    # - Launcher that boots straight into its module via factory URL
 
     create_wrapper_app() {
         local app_name="$1"     # e.g. "EUnifyer Docs"
@@ -504,24 +504,13 @@ if [ -n "${APP_BUNDLE:-}" ]; then
         local factory_url="$5"  # e.g. "private:factory/swriter"
 
         local wrapper_dir="${INSTDIR}/${app_name}.app"
-        local main_contents="${APP_BUNDLE}/Contents"
         rm -rf "$wrapper_dir"
-        mkdir -p "${wrapper_dir}/Contents/MacOS"
-        mkdir -p "${wrapper_dir}/Contents/Resources"
 
-        # Symlink shared content from main app (frameworks, libraries, etc.)
-        for item in "$main_contents"/*; do
-            local name=$(basename "$item")
-            case "$name" in
-                Info.plist|MacOS|Resources) ;; # We provide our own
-                *) ln -s "$item" "${wrapper_dir}/Contents/${name}" ;;
-            esac
-        done
-
-        # Symlink all Resources from main app, we'll override the icon
-        for item in "$main_contents/Resources"/*; do
-            ln -s "$item" "${wrapper_dir}/Contents/Resources/$(basename "$item")" 2>/dev/null || true
-        done
+        # Standalone bundle: copy the whole main app payload (program,
+        # frameworks, libraries, resources) so Docs/Sheets/Slides run entirely
+        # on their own — no dependency on "EUnifyer Office.app" being installed.
+        # ditto faithfully clones the bundle; we then swap icon/launcher/plist.
+        ditto "${APP_BUNDLE}" "${wrapper_dir}"
 
         # Generate our own .icns (overrides symlink if any)
         if [ -f "${ICONS}/${icon_src}.svg" ]; then
@@ -534,27 +523,12 @@ if [ -n "${APP_BUNDLE:-}" ]; then
         cat > "${wrapper_dir}/Contents/MacOS/launcher" << 'LAUNCHER'
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BUNDLE_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
-# Find the real soffice binary. The shipped main app is "EUnifyer Office.app"
-# (packaging renames it); in a dev instdir it's "EUnifyer.app". Check the
-# sibling bundle first (DMG / same folder), then the standard install dirs.
-SOFFICE=""
-for loc in \
-    "$BUNDLE_DIR/EUnifyer Office.app" \
-    "$BUNDLE_DIR/EUnifyer.app" \
-    "$BUNDLE_DIR/EUnifyerOffice.app" \
-    "/Applications/EUnifyer Office.app" \
-    "$HOME/Applications/EUnifyer Office.app" \
-    "/Applications/EUnifyer.app" \
-    "$HOME/Applications/EUnifyer.app"; do
-    if [ -x "$loc/Contents/MacOS/soffice" ]; then
-        SOFFICE="$loc/Contents/MacOS/soffice"
-        break
-    fi
-done
-if [ -z "$SOFFICE" ]; then
-    osascript -e 'display alert "EUnifyer Office not found" message "Please install EUnifyer Office first."'
+# This bundle is self-contained — launch its OWN soffice. No dependency on a
+# separately installed "EUnifyer Office.app".
+SOFFICE="$SCRIPT_DIR/soffice"
+if [ ! -x "$SOFFICE" ]; then
+    osascript -e 'display alert "EUnifyer Office" message "This app looks damaged. Please reinstall it."'
     exit 1
 fi
 
@@ -613,7 +587,7 @@ LAUNCHER
 </plist>
 PLIST
 
-        echo "   Created: ${app_name}.app (symlinked bundle, own dock identity)"
+        echo "   Created: ${app_name}.app (standalone bundle, own dock identity)"
     }
 
     create_wrapper_app "EUnifyer Docs"   "--writer"  "writer"  "docs"   "private:factory/swriter"

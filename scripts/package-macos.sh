@@ -103,7 +103,10 @@ for wrapper in "EUnifyer Docs" "EUnifyer Sheets" "EUnifyer Slides"; do
     src="${INSTDIR}/${wrapper}.app"
     if [ -d "$src" ]; then
         rm -rf "${OUTPUT_DIR}/${wrapper}.app"
-        cp -RL "$src" "${OUTPUT_DIR}/${wrapper}.app"
+        # ditto preserves the bundle faithfully (internal framework symlinks,
+        # perms). The wrappers are now full standalone apps, so do NOT use
+        # cp -RL — dereferencing would break the Frameworks symlink layout.
+        ditto "$src" "${OUTPUT_DIR}/${wrapper}.app"
         echo "   Copied: ${wrapper}.app"
     else
         echo "   WARN: ${wrapper}.app not found in instdir — run brand-overlay.sh first"
@@ -124,7 +127,7 @@ echo ">> Building DMG..."
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR"
 while IFS= read -r -d '' app; do
-    cp -RL "$app" "$STAGING_DIR/"
+    ditto "$app" "$STAGING_DIR/$(basename "$app")"
 done < <(find "$OUTPUT_DIR" -maxdepth 1 -name "*.app" -print0 | sort -z)
 
 rm -f "${OUTPUT_DIR}/${DMG_NAME}"
