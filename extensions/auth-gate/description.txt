@@ -1,0 +1,3 @@
+Connects EUnifyer Office to the EUnifyer ecosystem: shares sign-in with
+EUnifyer Desktop, keeps documents in your synced EUnifyer Drive folder, and
+shows a one-time welcome to the Tabbed interface. Bundled with EUnifyer Office.

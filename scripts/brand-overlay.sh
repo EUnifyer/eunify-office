@@ -359,6 +359,27 @@ if ls "${BRAND_TEMPLATES}"/*.ot? >/dev/null 2>&1; then
     echo "   Bundled default templates → ${TEMPLATE_DIR#${ROOT_DIR}/}"
 fi
 
+# ---------- 5c. Bundle the EUnifyer Auth Gate extension ----------
+# Pre-installs the auth-gate extension as a *bundled* extension. LibreOffice
+# scans $BRAND_BASE_DIR/Resources/extensions (BUNDLED_EXTENSIONS in lounorc)
+# and auto-registers any unpacked extension found there on first launch. This
+# wires up: first-run Tabbed-UI notice, Office<->Desktop sign-in sharing, and
+# the default save location (~/EUnifyer). Runs before the wrapper apps are
+# cloned (section 10) so Docs/Sheets/Slides inherit it automatically.
+AUTHGATE_SRC="${ROOT_DIR}/extensions/auth-gate"
+if [ -n "${APP_BUNDLE:-}" ]; then
+    EXT_DIR="${APP_BUNDLE}/Contents/Resources/extensions"
+else
+    EXT_DIR="${INSTDIR}/share/extensions"
+fi
+if [ -d "$AUTHGATE_SRC" ]; then
+    dest="${EXT_DIR}/auth-gate"
+    rm -rf "$dest"
+    mkdir -p "$EXT_DIR"
+    cp -R "$AUTHGATE_SRC" "$dest"
+    echo "   Bundled extension: auth-gate → ${dest#${ROOT_DIR}/}"
+fi
+
 # ---------- 5b. Update images_colibre.zip (runtime icon pack) ----------
 
 # This must run after section 5 so we know the correct config path

@@ -279,6 +279,49 @@ def _show_login_prompt():
     )
 
 
+# --- First-run notices ---
+
+# Bumped if the welcome copy changes and we want to re-show it once.
+FIRST_RUN_MARKER = "eunifyer_firstrun_v1"
+
+
+def _user_profile_dir():
+    """Return the LibreOffice user profile dir ($(user)) as a system path."""
+    try:
+        ctx = uno.getComponentContext()
+        smgr = ctx.ServiceManager
+        path_sub = smgr.createInstanceWithContext(
+            "com.sun.star.util.PathSubstitution", ctx
+        )
+        user_url = path_sub.getSubstituteVariableValue("$(user)")
+        return uno.fileUrlToSystemPath(user_url)
+    except Exception:
+        return ""
+
+
+def _maybe_show_first_run_notice():
+    """Show the Tabbed-UI welcome exactly once per profile."""
+    profile_dir = _user_profile_dir()
+    if not profile_dir:
+        return
+    marker = os.path.join(profile_dir, FIRST_RUN_MARKER)
+    if os.path.exists(marker):
+        return
+    _show_message(
+        "Welcome to EUnifyer Office",
+        "EUnifyer Office opens with a modern Tabbed interface —\n"
+        "your tools are grouped into ribbon-style tabs at the top,\n"
+        "so the most common actions are always one click away.\n\n"
+        "Prefer the classic toolbars? Switch any time via\n"
+        "View ▸ User Interface.",
+    )
+    try:
+        with open(marker, "w") as fh:
+            fh.write("1\n")
+    except OSError:
+        pass
+
+
 # --- Main entry point ---
 
 def check_auth_on_startup():
@@ -313,20 +356,38 @@ def check_auth_on_startup():
 
 
 # --- LibreOffice extension registration ---
+#
+# Registered as a com.sun.star.task.Job and bound (via Jobs.xcu) to the
+# onFirstVisibleTask event, so it runs once each time the app starts, after
+# the first window is visible (so dialogs have a parent).
 
-g_ImplementationHelper = None
+import unohelper
+from com.sun.star.task import XJob
 
-try:
-    import unohelper
+IMPL_NAME = "com.eunifyer.AuthGateJob"
 
-    class AuthGateJob(unohelper.Base):
-        """Job that runs on application startup."""
 
-        def __init__(self, ctx):
-            self.ctx = ctx
+class AuthGateJob(unohelper.Base, XJob):
+    """Job that runs on application startup."""
 
-        def trigger(self, args):
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def execute(self, args):
+        # Each step is independent and best-effort — a failure in one must not
+        # block the others or break startup.
+        try:
+            _maybe_show_first_run_notice()
+        except Exception:
+            pass
+        try:
             check_auth_on_startup()
+        except Exception:
+            pass
+        return None
 
-except ImportError:
-    pass
+
+g_ImplementationHelper = unohelper.ImplementationHelper()
+g_ImplementationHelper.addImplementation(
+    AuthGateJob, IMPL_NAME, ("com.sun.star.task.Job",),
+)
