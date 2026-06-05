@@ -43,12 +43,24 @@ rm -rf "$APP_DIR"
 mkdir -p "${APP_DIR}/Contents/MacOS"
 mkdir -p "${APP_DIR}/Contents/Resources"
 
-# Copy from the built .app bundle inside instdir
-BUILT_APP=$(find "$INSTDIR" -maxdepth 1 -name "*.app" -type d | head -1)
+# Copy from the built .app bundle inside instdir. brand-overlay.sh also creates
+# per-app wrapper bundles (EUnifyer Docs/Sheets/Slides.app) whose soffice is a
+# symlink — pick the real main app: the one with a regular soffice binary.
+BUILT_APP=""
+while IFS= read -r app; do
+    case "$(basename "$app")" in
+        "EUnifyer Docs.app"|"EUnifyer Sheets.app"|"EUnifyer Slides.app") continue ;;
+    esac
+    if [ -f "${app}/Contents/MacOS/soffice" ] && [ ! -L "${app}/Contents/MacOS/soffice" ]; then
+        BUILT_APP="$app"
+        break
+    fi
+done < <(find "$INSTDIR" -maxdepth 1 -name "*.app" -type d | sort)
 if [ -z "$BUILT_APP" ]; then
-    echo "ERROR: No .app bundle found in ${INSTDIR}" >&2
+    echo "ERROR: No main .app bundle (with a real soffice) found in ${INSTDIR}" >&2
     exit 1
 fi
+echo "   Main app: $(basename "$BUILT_APP")"
 cp -R "${BUILT_APP}/Contents/"* "${APP_DIR}/Contents/"
 
 # Create Info.plist
