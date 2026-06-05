@@ -58,4 +58,26 @@
     </node>
   </oor:component-data>
 
+  <!-- Default document font: DM Sans (EUnifyer brand typeface, bundled) -->
+  <oor:component-data oor:name="Writer"
+    oor:package="org.openoffice.Office">
+    <node oor:name="DefaultFont">
+      <prop oor:name="Standard"><value>DM Sans</value></prop>
+      <prop oor:name="Heading"><value>DM Sans</value></prop>
+      <prop oor:name="List"><value>DM Sans</value></prop>
+      <prop oor:name="Caption"><value>DM Sans</value></prop>
+      <prop oor:name="Index"><value>DM Sans</value></prop>
+    </node>
+  </oor:component-data>
+
+  <!-- Cleaner first run: skip the setup wizard + tip-of-the-day popups so the
+       suite feels product-like out of the box. -->
+  <oor:component-data oor:name="Common"
+    oor:package="org.openoffice.Office">
+    <node oor:name="Misc">
+      <prop oor:name="FirstRun"><value>false</value></prop>
+      <prop oor:name="ShowTipOfTheDay"><value>false</value></prop>
+    </node>
+  </oor:component-data>
+
 </oor:data>
