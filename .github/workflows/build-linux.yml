@@ -36,6 +36,7 @@ jobs:
             libcups2-dev libfontconfig1-dev libxrandr-dev \
             libxinerama-dev libgl1-mesa-dev libgtk-3-dev \
             libxrender-dev libxext-dev \
+            libunwind-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             libkrb5-dev libnss3-dev \
             librsvg2-bin
