@@ -536,9 +536,18 @@ if [ -n "${APP_BUNDLE:-}" ]; then
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUNDLE_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
-# Find the real soffice binary
+# Find the real soffice binary. The shipped main app is "EUnifyer Office.app"
+# (packaging renames it); in a dev instdir it's "EUnifyer.app". Check the
+# sibling bundle first (DMG / same folder), then the standard install dirs.
 SOFFICE=""
-for loc in "$BUNDLE_DIR/EUnifyerOffice.app" "$BUNDLE_DIR/EUnifyer.app" /Applications/EUnifyer.app ~/Applications/EUnifyer.app; do
+for loc in \
+    "$BUNDLE_DIR/EUnifyer Office.app" \
+    "$BUNDLE_DIR/EUnifyer.app" \
+    "$BUNDLE_DIR/EUnifyerOffice.app" \
+    "/Applications/EUnifyer Office.app" \
+    "$HOME/Applications/EUnifyer Office.app" \
+    "/Applications/EUnifyer.app" \
+    "$HOME/Applications/EUnifyer.app"; do
     if [ -x "$loc/Contents/MacOS/soffice" ]; then
         SOFFICE="$loc/Contents/MacOS/soffice"
         break
