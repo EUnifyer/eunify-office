@@ -6,7 +6,10 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 LO_DIR="${ROOT_DIR}/libreoffice"
 INSTDIR="${LO_DIR}/instdir"
 OUTPUT_DIR="${ROOT_DIR}/dist"
-APP_NAME="EUnifyer.app"
+# Must stay "EUnifyer Office.app": eunify-desktop's office.rs detects this exact
+# path (/Applications/EUnifyer Office.app) and it avoids colliding with the
+# Desktop app, which installs as "EUnifyer.app".
+APP_NAME="EUnifyer Office.app"
 DMG_NAME="EUnifyer-Office.dmg"
 BUNDLE_ID="com.eunifyer.office"
 VERSION="${1:-1.0.0}"
@@ -57,9 +60,9 @@ cat > "${APP_DIR}/Contents/Info.plist" << PLIST
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleName</key>
-    <string>EUnifyer</string>
+    <string>EUnifyer Office</string>
     <key>CFBundleDisplayName</key>
-    <string>EUnifyer</string>
+    <string>EUnifyer Office</string>
     <key>CFBundleVersion</key>
     <string>${VERSION}</string>
     <key>CFBundleShortVersionString</key>

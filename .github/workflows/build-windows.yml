@@ -13,15 +13,74 @@ jobs:
   build:
     runs-on: windows-2022
     timeout-minutes: 420
+    env:
+      OFFICE_DIST_TOKEN: ${{ secrets.OFFICE_DIST_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup build environment
-        run: |
-          echo "Windows build pipeline — requires Visual Studio 2022 + Cygwin"
-          echo "See: https://wiki.documentfoundation.org/Development/BuildingOnWindows"
-          echo "TODO: Implement full Windows build steps"
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      # TODO: Install Cygwin, JDK, configure, build
-      # This is a placeholder — Windows builds are complex
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # NOTE: Building LibreOffice on Windows requires Cygwin + Visual Studio
+      # 2022 + the dependency tarballs, driven through autogen.sh/make under the
+      # Cygwin bash, exactly like the macOS/Linux path in scripts/build.sh.
+      # See https://wiki.documentfoundation.org/Development/BuildingOnWindows.
+      # This step is the remaining cross-platform gap — wire it to produce
+      # libreoffice/instdir, then the packaging step below ships it.
+      - name: Build EUnifyer Office
+        shell: bash
+        run: |
+          if [ ! -d libreoffice/instdir/program ]; then
+            echo "::warning::Windows LibreOffice build not yet wired in CI — see step comment."
+            echo "Skipping packaging because libreoffice/instdir is absent."
+            echo "build_ok=false" >> "$GITHUB_ENV"
+          else
+            echo "build_ok=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Package (.zip / .msi)
+        if: env.build_ok == 'true'
+        shell: pwsh
+        run: ./scripts/package-windows.ps1 -Version "${{ steps.ver.outputs.version }}"
+
+      - name: Checksums
+        if: env.build_ok == 'true'
+        shell: pwsh
+        working-directory: dist
+        run: |
+          Get-FileHash -Algorithm SHA256 (Get-ChildItem *windows*.zip,*windows*.msi -ErrorAction SilentlyContinue) |
+            ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } |
+            Set-Content SHA256SUMS-windows
+
+      - name: Upload artifact
+        if: env.build_ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: eunifyer-office-windows-${{ steps.ver.outputs.version }}
+          path: |
+            dist/*windows*.zip
+            dist/*windows*.msi
+            dist/SHA256SUMS-windows
+          retention-days: 30
+
+      - name: Publish to eunify-office-dist
+        if: ${{ env.build_ok == 'true' && startsWith(github.ref, 'refs/tags/v') && env.OFFICE_DIST_TOKEN != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: EUnifyer/eunify-office-dist
+          token: ${{ secrets.OFFICE_DIST_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: EUnifyer Office ${{ github.ref_name }}
+          files: |
+            dist/*windows*.zip
+            dist/*windows*.msi
+            dist/SHA256SUMS-windows

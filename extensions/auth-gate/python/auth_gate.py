@@ -20,7 +20,9 @@ import uno  # noqa: F401
 
 KEYCHAIN_SERVICE = "com.eunifyer.auth"
 SYNC_FOLDER_NAME = "EUnifyer"
-DOWNLOAD_URL = "https://eunifyer.com/download/desktop"
+# EUnifyer Desktop download — the #desktop section of the unified download page
+# (kept in sync with eunifyer-landing's /download route + anchors).
+DOWNLOAD_URL = "https://eunifyer.com/download#desktop"
 
 # --- Platform detection ---
 
@@ -248,9 +250,10 @@ def _show_install_prompt():
     """Prompt user to download EUnifyer Desktop."""
     _show_message(
         "EUnifyer Office",
-        "EUnifyer Desktop is needed to sync your files.\n\n"
-        "It keeps your documents in sync across devices,\n"
-        "like OneDrive or Google Drive.\n\n"
+        "EUnifyer Office works best with EUnifyer Desktop.\n\n"
+        "Desktop keeps your documents synced across devices —\n"
+        "like OneDrive or Google Drive, but yours — and signs you\n"
+        "in once for both apps.\n\n"
         f"Download it at:\n{DOWNLOAD_URL}\n\n"
         "After installing, restart EUnifyer Office.",
     )

@@ -1,0 +1,82 @@
+name: Build Linux
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: build-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 420
+    env:
+      OFFICE_DIST_TOKEN: ${{ secrets.OFFICE_DIST_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git ccache zip \
+            autoconf automake libtool pkg-config gperf \
+            bison flex nasm \
+            openjdk-17-jdk ant junit4 \
+            libxml2-utils xsltproc \
+            libcups2-dev libfontconfig1-dev libxrandr-dev \
+            libxinerama-dev libgl1-mesa-dev libgtk-3-dev \
+            libkrb5-dev libnss3-dev
+          echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))" >> $GITHUB_ENV
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-linux-${{ github.sha }}
+          restore-keys: ccache-linux-
+
+      - name: Build EUnifyer Office
+        env:
+          SKIP_CLONE: false
+          CCACHE_DIR: ~/.ccache
+        run: ./scripts/build.sh
+
+      - name: Package (.tar.gz / .deb / .AppImage)
+        run: ./scripts/package-linux.sh "${{ steps.ver.outputs.version }}"
+
+      - name: Checksums
+        working-directory: dist
+        run: |
+          shopt -s nullglob
+          sha256sum EUnifyer-Office-*-linux-* > SHA256SUMS-linux || true
+          cat SHA256SUMS-linux || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eunifyer-office-linux-${{ steps.ver.outputs.version }}
+          path: |
+            dist/EUnifyer-Office-*-linux-*
+            dist/SHA256SUMS-linux
+          retention-days: 30
+
+      - name: Publish to eunify-office-dist
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && env.OFFICE_DIST_TOKEN != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: EUnifyer/eunify-office-dist
+          token: ${{ secrets.OFFICE_DIST_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: EUnifyer Office ${{ github.ref_name }}
+          files: |
+            dist/EUnifyer-Office-*-linux-*
+            dist/SHA256SUMS-linux
