@@ -60,6 +60,7 @@ if [ ! -f config_host.mk ]; then
         --with-product-name="EUnifyer" \
         --with-theme="colibre" \
         --without-java \
+        --disable-cli \
         --enable-release-build \
         --enable-bogus-pkg-config
 fi
