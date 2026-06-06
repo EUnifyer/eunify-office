@@ -51,7 +51,17 @@ svg_to_png() {
 
 resize_png() {
     local src="$1" out="$2" size="$3"
-    sips -z "$size" "$size" "$src" --out "$out" &>/dev/null
+    # macOS has sips; Linux/CI uses ImageMagick. '!' forces exact square dims
+    # (matches sips -z behaviour).
+    if command -v sips &>/dev/null; then
+        sips -z "$size" "$size" "$src" --out "$out" &>/dev/null
+    elif command -v magick &>/dev/null; then
+        magick "$src" -resize "${size}x${size}!" "$out"
+    elif command -v convert &>/dev/null; then
+        convert "$src" -resize "${size}x${size}!" "$out"
+    else
+        die "No image resizer found (need sips or ImageMagick) for $out"
+    fi
 }
 
 # Convert icon source to PNG at given size (SVG or PNG source)

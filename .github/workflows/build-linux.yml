@@ -40,7 +40,7 @@ jobs:
             libunwind-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             libkrb5-dev libnss3-dev \
-            librsvg2-bin
+            librsvg2-bin imagemagick
           echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))" >> $GITHUB_ENV
           # LibreOffice master needs GCC >= 12; ubuntu-22.04 defaults to gcc-11.
           echo "CC=gcc-12" >> $GITHUB_ENV
