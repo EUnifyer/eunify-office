@@ -107,6 +107,20 @@ case "$(uname -s)" in
         fi ;;
 esac
 
+# Windows: harfbuzz builds via meson, whose cl.exe sanity check reads the bare
+# INCLUDE env var — but LO only converts INCLUDE to the proper ';'-separated,
+# no-'-I' form for its *nmake* externals (gb_ExternalProject_INCLUDE), leaving
+# meson with the raw '-I…' SOLARINC form → cl.exe error D8038. Prefix harfbuzz's
+# meson call with the correctly-converted INCLUDE.
+case "$(uname -s)" in
+    CYGWIN*|MINGW*|MSYS*)
+        _hbmk=external/harfbuzz/ExternalProject_harfbuzz.mk
+        if [ -f "$_hbmk" ] && ! grep -q 'gb_ExternalProject_INCLUDE) \$(MESON)' "$_hbmk"; then
+            sed -i 's#\(\$(MESON) setup --wrap-mode\)#INCLUDE="$(gb_ExternalProject_INCLUDE)" \1#' "$_hbmk"
+            echo ">> Patched harfbuzz meson INCLUDE ($(grep -c gb_ExternalProject_INCLUDE "$_hbmk") site)"
+        fi ;;
+esac
+
 # 3. Build
 echo ">> Building with $MAKE (this takes 2-3h on first run)..."
 $MAKE $JOBS
