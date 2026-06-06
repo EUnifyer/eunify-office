@@ -54,6 +54,13 @@ fi
 # 2. Configure
 if [ ! -f config_host.mk ]; then
     echo ">> Running autogen.sh..."
+    # Windows-only flags: the gpg externals (libgpg-error/libassuan/gpgmepp)
+    # don't build cleanly under Cygwin+MSVC, and OpenPGP doc encryption isn't
+    # essential — disable on Windows while keeping it on mac/Linux.
+    WIN_FLAGS=""
+    case "$(uname -s)" in
+        CYGWIN*|MINGW*|MSYS*) WIN_FLAGS="--disable-gpgmepp" ;;
+    esac
     MESON="$(python3 -c 'import shutil; print(shutil.which("meson"))')" \
     ./autogen.sh \
         --with-vendor="EUnifyer" \
@@ -61,6 +68,7 @@ if [ ! -f config_host.mk ]; then
         --with-theme="colibre" \
         --without-java \
         --disable-cli \
+        $WIN_FLAGS \
         --enable-release-build \
         --enable-bogus-pkg-config
 fi
