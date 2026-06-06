@@ -85,6 +85,22 @@ case "$(uname -s)" in
         sed -i -E 's#^(export ATL_INCLUDE=)/cygdrive/c/#\1C:/#; s#^(export ATL_LIB=)/cygdrive/c/#\1C:/#' config_host.mk ;;
 esac
 
+# Windows: meson-based externals (e.g. harfbuzz) rely on the standard MSVC
+# INCLUDE/LIB env vars, but LO's own gbuild passes -I/-LIBPATH explicitly and
+# never exports LIB — so the external's link fails (LNK1104: MSVCRT.lib). Import
+# INCLUDE/LIB from vcvars64 so the native cl.exe/link.exe work for those.
+case "$(uname -s)" in
+    CYGWIN*|MINGW*|MSYS*)
+        _vcvars="/cygdrive/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Auxiliary/Build/vcvars64.bat"
+        if [ -f "$_vcvars" ]; then
+            while IFS= read -r _l; do
+                _l="${_l%$'\r'}"
+                case "$_l" in INCLUDE=*|LIB=*) export "$_l" ;; esac
+            done < <(cmd /c "\"$(cygpath -w "$_vcvars")\" >nul 2>&1 && set")
+            echo ">> Imported MSVC INCLUDE/LIB from vcvars64 (LIB set: $([ -n "$LIB" ] && echo yes || echo NO))"
+        fi ;;
+esac
+
 # 3. Build
 echo ">> Building with $MAKE (this takes 2-3h on first run)..."
 $MAKE $JOBS
