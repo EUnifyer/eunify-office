@@ -77,6 +77,14 @@ if [ ! -f config_host.mk ]; then
         --enable-bogus-pkg-config
 fi
 
+# Windows: configure can emit ATL_INCLUDE/ATL_LIB as Cygwin (/cygdrive/c/…)
+# paths, which the native MSVC cl.exe can't read (it needs C:/… form like the
+# other SDK includes), breaking the ActiveX module. Rewrite them in place.
+case "$(uname -s)" in
+    CYGWIN*|MINGW*|MSYS*)
+        sed -i -E 's#^(export ATL_INCLUDE=)/cygdrive/c/#\1C:/#; s#^(export ATL_LIB=)/cygdrive/c/#\1C:/#' config_host.mk ;;
+esac
+
 # 3. Build
 echo ">> Building with $MAKE (this takes 2-3h on first run)..."
 $MAKE $JOBS
