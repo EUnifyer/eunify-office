@@ -93,11 +93,17 @@ case "$(uname -s)" in
     CYGWIN*|MINGW*|MSYS*)
         _vcvars="/cygdrive/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Auxiliary/Build/vcvars64.bat"
         if [ -f "$_vcvars" ]; then
+            # Write a tiny .bat that calls vcvars (no output redirect — redirecting
+            # the call breaks it) then dumps `set`; parse INCLUDE/LIB out of it.
+            printf '@echo off\r\ncall "%s"\r\nset\r\n' \
+                'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat' \
+                > .vcdump.bat
             while IFS= read -r _l; do
                 _l="${_l%$'\r'}"
                 case "$_l" in INCLUDE=*|LIB=*) export "$_l" ;; esac
-            done < <(cmd /c "\"$(cygpath -w "$_vcvars")\" >nul 2>&1 && set")
-            echo ">> Imported MSVC INCLUDE/LIB from vcvars64 (LIB set: $([ -n "$LIB" ] && echo yes || echo NO))"
+            done < <(cmd /c "$(cygpath -w "$(pwd)")\\.vcdump.bat" 2>/dev/null)
+            rm -f .vcdump.bat
+            echo ">> Imported MSVC env from vcvars64 (LIB len: ${#LIB}, INCLUDE len: ${#INCLUDE})"
         fi ;;
 esac
 
