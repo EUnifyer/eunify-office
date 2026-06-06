@@ -59,7 +59,11 @@ if [ ! -f config_host.mk ]; then
     # essential — disable on Windows while keeping it on mac/Linux.
     WIN_FLAGS=""
     case "$(uname -s)" in
-        CYGWIN*|MINGW*|MSYS*) WIN_FLAGS="--disable-gpgmepp" ;;
+        CYGWIN*|MINGW*|MSYS*)
+            # gpg externals fail under Cygwin+MSVC; firebird's build-time tools
+            # fail on missing UCRT DLLs. Both features are non-essential — disable
+            # on Windows (mac/Linux keep them).
+            WIN_FLAGS="--disable-gpgmepp --disable-firebird-sdbc" ;;
     esac
     MESON="$(python3 -c 'import shutil; print(shutil.which("meson"))')" \
     ./autogen.sh \
