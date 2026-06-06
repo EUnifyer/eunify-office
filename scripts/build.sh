@@ -115,13 +115,15 @@ esac
 case "$(uname -s)" in
     CYGWIN*|MINGW*|MSYS*)
         _hbmk=external/harfbuzz/ExternalProject_harfbuzz.mk
-        if [ -f "$_hbmk" ] && ! grep -q 'PKG_CONFIG=pkgconf' "$_hbmk"; then
-            # INCLUDE: proper ';'-list form (see above). PKG_CONFIG: configure
-            # rewrites it to a Windows path (C:/…/pkgconf.exe) that the cygwin
-            # meson can't exec, so it finds no deps (graphite2/icu) — force the
-            # bare name so meson resolves it on PATH.
-            sed -i 's#\$(MESON) setup --wrap-mode#INCLUDE="$(gb_ExternalProject_INCLUDE)" PKG_CONFIG=pkgconf $(MESON) setup --wrap-mode#' "$_hbmk"
-            echo ">> Patched harfbuzz meson INCLUDE+PKG_CONFIG"
+        if [ -f "$_hbmk" ] && ! grep -q 'export INCLUDE=' "$_hbmk"; then
+            # Export (not just prefix) so it covers BOTH meson setup and the
+            # ninja compile — cl.exe reads INCLUDE for its default header search
+            # and LO leaves it in raw '-I…' form (D8038). gb_ExternalProject_INCLUDE
+            # is the proper ';'-separated, no-'-I' form. PKG_CONFIG: configure
+            # rewrites it to a Windows path the cygwin meson can't exec, so force
+            # the bare name (deps resolve via .pc in pkgconf's default dir).
+            sed -i 's#PKG_CONFIG_PATH="#export INCLUDE="$(gb_ExternalProject_INCLUDE)" \&\& export PKG_CONFIG=pkgconf \&\& PKG_CONFIG_PATH="#' "$_hbmk"
+            echo ">> Patched harfbuzz env (export INCLUDE/PKG_CONFIG for setup+compile)"
         fi ;;
 esac
 
