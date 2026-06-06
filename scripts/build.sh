@@ -68,9 +68,14 @@ fi
 echo ">> Building with $MAKE (this takes 2-3h on first run)..."
 $MAKE $JOBS
 
-# 4. Apply branding
-echo ">> Applying EUnifyer branding..."
-"${SCRIPT_DIR}/brand-overlay.sh"
+# 4. Apply branding (SKIP_BRAND=1 to build the bare instdir and brand separately
+# — useful when iterating branding without a multi-hour recompile)
+if [ "${SKIP_BRAND:-0}" = "1" ]; then
+    echo ">> Skipping branding (SKIP_BRAND=1)"
+else
+    echo ">> Applying EUnifyer branding..."
+    "${SCRIPT_DIR}/brand-overlay.sh"
+fi
 
 echo ""
 echo "========================================"
