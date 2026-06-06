@@ -116,14 +116,16 @@ case "$(uname -s)" in
     CYGWIN*|MINGW*|MSYS*)
         _hbmk=external/harfbuzz/ExternalProject_harfbuzz.mk
         if [ -f "$_hbmk" ] && ! grep -q 'export INCLUDE=' "$_hbmk"; then
-            # Export (not just prefix) so it covers BOTH meson setup and the
-            # ninja compile — cl.exe reads INCLUDE for its default header search
-            # and LO leaves it in raw '-I…' form (D8038). gb_ExternalProject_INCLUDE
-            # is the proper ';'-separated, no-'-I' form. PKG_CONFIG: configure
-            # rewrites it to a Windows path the cygwin meson can't exec, so force
-            # the bare name (deps resolve via .pc in pkgconf's default dir).
-            sed -i 's#PKG_CONFIG_PATH="#export INCLUDE="$(gb_ExternalProject_INCLUDE)" \&\& export PKG_CONFIG=pkgconf \&\& PKG_CONFIG_PATH="#' "$_hbmk"
-            echo ">> Patched harfbuzz env (export INCLUDE/PKG_CONFIG for setup+compile)"
+            # Three Windows fixes injected into harfbuzz's meson run:
+            #  - chmod +x the .py scripts (the tarball unpacks them without the
+            #    exec bit; meson runs gen-hb-version.py via its shebang → EACCES).
+            #  - export INCLUDE in proper ';'/no-'-I' form so BOTH meson setup and
+            #    the ninja compile see it (cl.exe reads INCLUDE → else D8038).
+            #  - export bare PKG_CONFIG (configure rewrites it to a Windows path
+            #    the cygwin meson can't exec); deps resolve via .pc in pkgconf's
+            #    default dir.
+            sed -i 's#PKG_CONFIG_PATH="#find . -name "*.py" -exec chmod +x {} + \&\& export INCLUDE="$(gb_ExternalProject_INCLUDE)" \&\& export PKG_CONFIG=pkgconf \&\& PKG_CONFIG_PATH="#' "$_hbmk"
+            echo ">> Patched harfbuzz env (chmod +x .py, export INCLUDE/PKG_CONFIG)"
         fi ;;
 esac
 
