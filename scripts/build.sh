@@ -115,9 +115,13 @@ esac
 case "$(uname -s)" in
     CYGWIN*|MINGW*|MSYS*)
         _hbmk=external/harfbuzz/ExternalProject_harfbuzz.mk
-        if [ -f "$_hbmk" ] && ! grep -q 'gb_ExternalProject_INCLUDE) \$(MESON)' "$_hbmk"; then
-            sed -i 's#\(\$(MESON) setup --wrap-mode\)#INCLUDE="$(gb_ExternalProject_INCLUDE)" \1#' "$_hbmk"
-            echo ">> Patched harfbuzz meson INCLUDE ($(grep -c gb_ExternalProject_INCLUDE "$_hbmk") site)"
+        if [ -f "$_hbmk" ] && ! grep -q 'PKG_CONFIG=pkgconf' "$_hbmk"; then
+            # INCLUDE: proper ';'-list form (see above). PKG_CONFIG: configure
+            # rewrites it to a Windows path (C:/…/pkgconf.exe) that the cygwin
+            # meson can't exec, so it finds no deps (graphite2/icu) — force the
+            # bare name so meson resolves it on PATH.
+            sed -i 's#\$(MESON) setup --wrap-mode#INCLUDE="$(gb_ExternalProject_INCLUDE)" PKG_CONFIG=pkgconf $(MESON) setup --wrap-mode#' "$_hbmk"
+            echo ">> Patched harfbuzz meson INCLUDE+PKG_CONFIG"
         fi ;;
 esac
 
