@@ -67,8 +67,8 @@ On tagged releases (`v*`), CI publishes the installers to the public
 
 ## EUnifyer Desktop integration
 
-Office and **[EUnifyer Desktop](../eunify-desktop)** (the Drive sync client)
-are deeply aligned:
+Office and **[EUnifyer Desktop](https://eunifyer.com/download#desktop)** (the
+Drive sync client) are deeply aligned:
 
 - The bundled **auth-gate** extension shares the OS-keychain login with Desktop
   and, if Desktop isn't installed, points users to
@@ -80,5 +80,30 @@ are deeply aligned:
 
 ## License
 
-This overlay is proprietary (branding, logos, extensions).
-The underlying LibreOffice source is MPL-2.0 — keep the fork public.
+This repository — the build scripts, configuration, extensions and branding
+assets — is licensed under **Apache-2.0**. See [LICENSE](./LICENSE).
+
+It does **not** contain LibreOffice source code. It builds on top of it.
+
+### Upstream
+
+| Component | Source | License |
+|---|---|---|
+| LibreOffice Community (our fork) | [EUnifyer/libreoffice-core](https://github.com/EUnifyer/libreoffice-core) | MPL-2.0 |
+| LibreOffice Community (upstream) | [libreoffice/core](https://git.libreoffice.org/core) | MPL-2.0 |
+| DM Sans (`branding/fonts/`) | [Google Fonts](https://fonts.google.com/specimen/DM+Sans) | OFL-1.1 — see [OFL.txt](./branding/fonts/OFL.txt) |
+
+Our modifications to LibreOffice — branding assets, default font stack,
+Start Center changes and menu configuration — live in the
+[libreoffice-core fork](https://github.com/EUnifyer/libreoffice-core), which is
+public under MPL-2.0 as that license requires. The fork keeps the upstream
+`COPYING`, `COPYING.MPL` and `COPYING.LGPL` notices and the unmodified About
+dialog intact.
+
+### Trademarks
+
+EUnifyer is not affiliated with, endorsed by, or sponsored by The Document
+Foundation. "LibreOffice" and the LibreOffice logo are trademarks of The
+Document Foundation, used here only to identify the upstream project in
+accordance with [TDF's trademark policy](https://wiki.documentfoundation.org/TradeMark_Policy).
+The EUnifyer name and logos are not covered by the Apache-2.0 grant above.

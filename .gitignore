@@ -10,3 +10,21 @@ build/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Secrets — never commit. Signing/notarization credentials belong in
+# GitHub Actions secrets (see .github/workflows/), not in the tree.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+*.jks
+*.keystore
+*.mobileprovision
+*.provisionprofile
+secrets.json
+credentials.json
