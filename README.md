@@ -37,6 +37,13 @@ libreoffice/instdir/program/soffice
 
 ## Branding Only (no rebuild)
 
+Branding uses the October 2026 Open Circle kit. Generate its assets from the
+sibling `eunify` checkout with
+`node infra/scripts/brand/build-assets.mjs --siblings` before applying the
+overlay. New documents and bundled default templates use Sora. Existing
+documents keep their fonts. Installers need a new packaged release to receive
+the updated icons and splash screen.
+
 ```bash
 # After a full build, apply branding changes in seconds:
 ./scripts/brand-overlay.sh
@@ -92,6 +99,7 @@ It does **not** contain LibreOffice source code. It builds on top of it.
 | LibreOffice Community (our fork) | [EUnifyer/libreoffice-core](https://github.com/EUnifyer/libreoffice-core) | MPL-2.0 |
 | LibreOffice Community (upstream) | [libreoffice/core](https://git.libreoffice.org/core) | MPL-2.0 |
 | DM Sans (`branding/fonts/`) | [Google Fonts](https://fonts.google.com/specimen/DM+Sans) | OFL-1.1 — see [OFL.txt](./branding/fonts/OFL.txt) |
+| Sora (`branding/fonts/`) | Supplied Open Circle brand kit | OFL-1.1 — see [Sora-OFL.txt](./branding/fonts/Sora-OFL.txt) |
 
 Our modifications to LibreOffice — branding assets, default font stack,
 Start Center changes and menu configuration — live in the

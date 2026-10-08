@@ -1,6 +1,9 @@
 # EUnifyer Office — Brand Assets
 
-Placeholder assets for the LibreOffice fork. Replace with final designs.
+Open Circle assets from the supplied October 2026 brand kit. Generate them from
+the sibling `eunify` checkout with
+`node infra/scripts/brand/build-assets.mjs --siblings`. Packaging applies the
+overlay to the built LibreOffice distribution.
 
 ## Files
 

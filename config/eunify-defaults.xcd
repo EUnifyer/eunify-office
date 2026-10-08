@@ -58,15 +58,15 @@
     </node>
   </oor:component-data>
 
-  <!-- Default document font: DM Sans (EUnifyer brand typeface, bundled) -->
+  <!-- Default document font: Sora (EUnifyer brand typeface, bundled) -->
   <oor:component-data oor:name="Writer"
     oor:package="org.openoffice.Office">
     <node oor:name="DefaultFont">
-      <prop oor:name="Standard"><value>DM Sans</value></prop>
-      <prop oor:name="Heading"><value>DM Sans</value></prop>
-      <prop oor:name="List"><value>DM Sans</value></prop>
-      <prop oor:name="Caption"><value>DM Sans</value></prop>
-      <prop oor:name="Index"><value>DM Sans</value></prop>
+      <prop oor:name="Standard"><value>Sora</value></prop>
+      <prop oor:name="Heading"><value>Sora</value></prop>
+      <prop oor:name="List"><value>Sora</value></prop>
+      <prop oor:name="Caption"><value>Sora</value></prop>
+      <prop oor:name="Index"><value>Sora</value></prop>
     </node>
   </oor:component-data>
 
