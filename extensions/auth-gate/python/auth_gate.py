@@ -18,6 +18,25 @@ import sys
 
 import uno  # noqa: F401
 
+# Sibling module (bundled alongside this file, declared in META-INF like the
+# drive extension's drive_client.py) holding the Windows install matrix.
+# Degrade to the legacy single-path check rather than break startup if the
+# import ever fails.
+#
+# pythonloader keeps the extension's `python/` directory off sys.path on some
+# builds, so make sure it is there before importing the siblings — same trick
+# the auth overlay's `import keychain` relies on.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+
+try:
+    import desktop_detect
+    import token_store
+except ImportError:  # pragma: no cover - only on a mis-installed bundle
+    desktop_detect = None
+    token_store = None
+
 KEYCHAIN_SERVICE = "com.eunifyer.auth"
 SYNC_FOLDER_NAME = "EUnifyer"
 # EUnifyer Desktop download — the #desktop section of the unified download page
@@ -28,6 +47,13 @@ DOWNLOAD_URL = "https://eunifyer.com/download#desktop"
 
 SYSTEM = platform.system()  # "Darwin", "Windows", "Linux"
 
+# com.sun.star.awt.XMessageBoxTypes / XMessageBoxResults, spelled out because
+# the UNO constants are numeric and easy to swap (the old docstring on
+# _show_message had them the wrong way round; QUERYBOX really is 1).
+QUERYBOX = 1
+BUTTONS_OK = 1
+BUTTONS_OK_CANCEL = 1 + 2
+MSG_OK = 1
 
 # --- Desktop app detection ---
 
@@ -42,6 +68,9 @@ def _desktop_app_paths():
             _office_sibling_path("EUnifyer Desktop.app"),
         ]
     elif SYSTEM == "Windows":
+        if desktop_detect is not None:
+            # Every (install dir, exe) pair the installer has ever produced.
+            return desktop_detect.windows_install_candidate_paths(os.environ)
         appdata = os.environ.get("LOCALAPPDATA", "")
         progfiles = os.environ.get("PROGRAMFILES", "C:\\Program Files")
         return [
@@ -83,8 +112,57 @@ def _office_sibling_path(name):
         return ""
 
 
+def _read_registry_value(hive_name, subkey, value_name):
+    """Read a string registry value, checking every WOW64 registry view.
+
+    The NSIS installer is a 32-bit process, so its HKCU/HKLM writes can land
+    under WOW6432Node while soffice.exe is 64-bit; checking one view finds
+    half the installs. Returns None when the value is absent or unreadable.
+    """
+    if SYSTEM != "Windows":
+        return None
+    try:
+        import winreg
+    except ImportError:  # pragma: no cover - winreg is Windows-only
+        return None
+    hives = {
+        "HKCU": winreg.HKEY_CURRENT_USER,
+        "HKLM": winreg.HKEY_LOCAL_MACHINE,
+    }
+    hive = hives.get(hive_name)
+    if hive is None:
+        return None
+    views = [
+        winreg.KEY_READ,
+        winreg.KEY_READ | getattr(winreg, "KEY_WOW64_64KEY", 0),
+        winreg.KEY_READ | getattr(winreg, "KEY_WOW64_32KEY", 0),
+    ]
+    for access in views:
+        try:
+            with winreg.OpenKey(hive, subkey, 0, access) as key:
+                value, _ = winreg.QueryValueEx(key, value_name)
+        except OSError:
+            continue
+        if isinstance(value, str) and value.strip():
+            return value
+    return None
+
+
 def _find_desktop_app():
-    """Return the path to EUnifyer Desktop if installed, else None."""
+    """Return the path to EUnifyer Desktop if installed, else None.
+
+    On Windows this also consults the registry, so an install the user moved
+    or customised is still found — the previous filesystem guess at
+    ``<ProgramFiles>\\EUnifyer Desktop\\EUnifyer Desktop.exe`` matched nothing
+    the installer actually writes, which is why Office asked for a Desktop
+    install that was already there.
+    """
+    if SYSTEM == "Windows" and desktop_detect is not None:
+        return desktop_detect.find_windows_desktop(
+            os.environ,
+            path_exists=os.path.exists,
+            read_registry_value=_read_registry_value,
+        )
     for path in _desktop_app_paths():
         if path and os.path.exists(path):
             return path
@@ -132,21 +210,15 @@ def _read_keychain_macos():
 
 
 def _read_credential_windows():
-    """Read from Windows Credential Manager via PowerShell."""
-    try:
-        ps_cmd = (
-            f'(Get-StoredCredential -Target "{KEYCHAIN_SERVICE}").Password '
-            f'| ConvertFrom-SecureString -AsPlainText'
-        )
-        result = subprocess.run(
-            ["powershell", "-Command", ps_cmd],
-            capture_output=True, text=True, timeout=5,
-        )
-        if result.returncode != 0:
-            return None
-        return json.loads(result.stdout.strip())
-    except (subprocess.SubprocessError, json.JSONDecodeError):
+    """Read the auth blob Desktop stored on Windows.
+
+    File mirror first, then the credential store — the same order Desktop
+    itself uses, so the two apps agree about who is signed in. See
+    token_store.py for why the old PowerShell lookup never worked.
+    """
+    if token_store is None:  # pragma: no cover - degraded bundle
         return None
+    return token_store.read_windows_tokens(os.environ)
 
 
 def _read_keyring_linux():
@@ -165,15 +237,11 @@ def _read_keyring_linux():
 
 def _is_token_valid(auth_data):
     """Check if the access token hasn't expired."""
-    expires_at = auth_data.get("expires_at", "")
-    if not expires_at:
-        return False
-    from datetime import datetime, timezone
-    try:
-        exp = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
-        return exp > datetime.now(timezone.utc)
-    except ValueError:
-        return False
+    if token_store is not None:
+        return token_store.is_token_valid(auth_data)
+    # Degraded bundle: accept anything that carries a token rather than
+    # nagging a signed-in user.
+    return bool(isinstance(auth_data, dict) and auth_data.get("access_token"))
 
 
 # --- Default save location ---
@@ -227,8 +295,13 @@ def _get_window():
     return None
 
 
-def _show_message(title, message, msg_type=1):
-    """Show a message box. msg_type: 1=INFO, 2=WARNING, 3=ERROR, 4=QUERY."""
+def _show_message(title, message, msg_type=QUERYBOX, buttons=BUTTONS_OK):
+    """Show a message box and return the clicked result (OK = 1).
+
+    `msg_type` / `buttons` are the numeric com.sun.star.awt.XMessageBoxTypes /
+    XMessageBoxButtons values; QUERYBOX with OK-only renders like an info
+    box, which is what the previous hard-coded call did.
+    """
     try:
         ctx = uno.getComponentContext()
         smgr = ctx.ServiceManager
@@ -238,7 +311,7 @@ def _show_message(title, message, msg_type=1):
         window = _get_window()
         if window:
             box = toolkit.createMessageBox(
-                window, msg_type, 1, title, message
+                window, msg_type, buttons, title, message
             )
             return box.execute()
     except Exception:
@@ -246,43 +319,68 @@ def _show_message(title, message, msg_type=1):
     return 0
 
 
+def _open_url(url):
+    """Open `url` in the user's browser (best effort)."""
+    try:
+        if SYSTEM == "Darwin":
+            subprocess.Popen(["open", url])
+        elif SYSTEM == "Windows":
+            subprocess.Popen(["start", url], shell=True)
+        else:
+            subprocess.Popen(["xdg-open", url])
+    except Exception:
+        pass
+
+
 def _show_install_prompt():
-    """Prompt user to download EUnifyer Desktop."""
-    _show_message(
+    """Offer to download EUnifyer Desktop; remember if the user declines.
+
+    OK opens the download page. Anything else — Cancel, Enter on a dialog we
+    could not raise, or a dialog that failed to appear — is remembered so
+    Office stops asking on every start. Previously this fired on every launch
+    *and* opened the browser unconditionally, which reads as a broken install
+    rather than an invitation.
+    """
+    answer = _show_message(
         "EUnifyer Office",
         "EUnifyer Office works best with EUnifyer Desktop.\n\n"
         "Desktop keeps your documents synced across devices —\n"
         "like OneDrive or Google Drive, but yours — and signs you\n"
         "in once for both apps.\n\n"
-        f"Download it at:\n{DOWNLOAD_URL}\n\n"
-        "After installing, restart EUnifyer Office.",
+        "Open the download page?",
+        msg_type=QUERYBOX,
+        buttons=BUTTONS_OK_CANCEL,
     )
-    # Open download page in browser
-    try:
-        if SYSTEM == "Darwin":
-            subprocess.Popen(["open", DOWNLOAD_URL])
-        elif SYSTEM == "Windows":
-            subprocess.Popen(["start", DOWNLOAD_URL], shell=True)
-        else:
-            subprocess.Popen(["xdg-open", DOWNLOAD_URL])
-    except Exception:
-        pass
+    if answer == MSG_OK:
+        _open_url(DOWNLOAD_URL)
+        return True
+    _write_marker(DESKTOP_PROMPT_MARKER)
+    return False
 
 
 def _show_login_prompt():
-    """Tell user to log in via the desktop app."""
-    _show_message(
+    """Tell the user to sign in via Desktop — once per profile."""
+    answer = _show_message(
         "EUnifyer Office",
         "Please sign in with your EUnifyer account.\n\n"
         "The EUnifyer Desktop app has been opened.\n"
         "Sign in there, then restart EUnifyer Office.",
+        msg_type=QUERYBOX,
+        buttons=BUTTONS_OK_CANCEL,
     )
+    _write_marker(LOGIN_HINT_MARKER)
+    return answer == MSG_OK
 
 
 # --- First-run notices ---
 
 # Bumped if the welcome copy changes and we want to re-show it once.
 FIRST_RUN_MARKER = "eunifyer_firstrun_v1"
+# Both auth prompts used to fire on every launch (report A). Each is now a
+# one-shot per LibreOffice profile, in the spirit of the first-run notice:
+# dismissing it leaves a marker behind, and deleting the file brings it back.
+DESKTOP_PROMPT_MARKER = "eunifyer_desktop_prompt_v1"
+LOGIN_HINT_MARKER = "eunifyer_login_hint_v1"
 
 
 def _user_profile_dir():
@@ -297,6 +395,28 @@ def _user_profile_dir():
         return uno.fileUrlToSystemPath(user_url)
     except Exception:
         return ""
+
+
+def _marker_path(name):
+    """Absolute path of a per-profile marker file, or '' without a profile."""
+    profile_dir = _user_profile_dir()
+    return os.path.join(profile_dir, name) if profile_dir else ""
+
+
+def _marker_exists(name):
+    marker = _marker_path(name)
+    return bool(marker) and os.path.exists(marker)
+
+
+def _write_marker(name):
+    marker = _marker_path(name)
+    if not marker:
+        return
+    try:
+        with open(marker, "w") as handle:
+            handle.write("1\n")
+    except OSError:
+        pass
 
 
 def _maybe_show_first_run_notice():
@@ -331,8 +451,12 @@ def check_auth_on_startup():
     1. Check for auth token in keychain
     2. If valid → set sync folder as default save path, done
     3. If no token → check if Desktop app is installed
-    4. If not installed → prompt download
-    5. If installed → launch it for login
+    4. If not installed → offer the download, once per profile
+    5. If installed → launch it, and hint about signing in once per profile
+
+    Steps 4 and 5 were the "asks me to install Desktop every startup" report:
+    detection never matched the real install (desktop_detect.py) and neither
+    dialog remembered that it had already been answered.
     """
     # Step 1: Check existing auth
     auth_data = _read_auth_token()
@@ -347,12 +471,14 @@ def check_auth_on_startup():
 
     if not desktop_app:
         # Step 3: Desktop app not installed — prompt download
-        _show_install_prompt()
+        if not _marker_exists(DESKTOP_PROMPT_MARKER):
+            _show_install_prompt()
         return
 
     # Step 4: Desktop app exists but not logged in — launch it
     _launch_desktop_app(desktop_app)
-    _show_login_prompt()
+    if not _marker_exists(LOGIN_HINT_MARKER):
+        _show_login_prompt()
 
 
 # --- LibreOffice extension registration ---

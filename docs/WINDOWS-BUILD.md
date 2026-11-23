@@ -209,9 +209,70 @@ cd libreoffice && mv instdir "EUnifyer Office"
 /usr/bin/zip -r -q -1 /cygdrive/c/EUnifyer-Office-26.8.0.0-windows-x64.zip "EUnifyer Office"
 mv "EUnifyer Office" instdir
 ```
-> `scripts/package-windows.ps1` (WiX `.msi`) currently has a PowerShell parse
-> error and was bypassed; the `.zip` is the shipped artifact. A signed `.msi`
-> installer is a future improvement.
+> `scripts/package-windows.ps1` (WiX `.msi`) parses cleanly under PowerShell 7
+> (`Language.Parser::ParseFile`) but has never been run end to end on Windows,
+> so the `.zip` remains the shipped artifact. See §8 before shipping it again.
+
+> **Auth gate and the Desktop install.** `extensions/auth-gate` asks the user to
+> install EUnifyer Desktop when it cannot find one, so it has to recognise every
+> name the Desktop installer has ever produced. Tauri's NSIS/WiX bundles key the
+> install directory, the executable, the uninstall entry and the shortcut on
+> `productName` (`EUnifyer` → `EUnifyer Desktop` → `DriveSync`) and name the
+> binary after the cargo package (`eunify-desktop.exe`) unless
+> `mainBinaryName` is set. The accepted matrix lives in
+> `extensions/auth-gate/python/desktop_detect.py`, the token lookup in
+> `token_store.py`; both are pure and unit-tested:
+>
+> ```bash
+> python3 -m unittest discover -s tests   # from the repo root
+> ```
+>
+> Change `productName`, `package.name`, the deep-link scheme or the keyring
+> service in `eunify-desktop` and you must update those two modules, or the
+> "install Desktop" prompt comes back. Each prompt is also remembered per
+> LibreOffice profile (a marker file in `$(user)`), so a dismissed prompt does
+> not return — delete the marker to re-arm it while testing.
+
+---
+
+## 8. Authenticode, Mark of the Web, and slow starts
+
+Windows users report 30 s–5 min hangs on every EUnifyer Office launch, which
+Defender attributes to scanning and submitting the app's binaries. Two things
+make that worse, both ours:
+
+1. **Nothing is signed.** No `signtool` call exists anywhere in this repo —
+   `scripts/package-windows.ps1` builds a `.zip` and an optional unsigned WiX
+   `.msi`, `.github/workflows/build-windows.yml` has no signing step or
+   certificate secret, and the published asset is
+   `EUnifyer-Office-<ver>-windows-x64.zip` (288 DLLs, 44 EXEs). The sibling
+   `eunify-desktop` installer is unsigned for the same reason
+   (`certificateThumbprint: null`).
+2. **The `.zip` carries Mark of the Web.** A file downloaded from the internet
+   gets a `Zone.Identifier`; extracting it with Explorer copies that marker onto
+   every extracted file, so Defender re-evaluates ~330 untrusted, unsigned
+   PE files on every launch instead of once at install. `msiexec` installs do
+   not propagate the marker to installed files.
+
+Ordered by payoff, all of them need a code-signing certificate first
+(OV is enough to stop the unknown-publisher treatment; EV also clears the
+SmartScreen "unknown publisher" prompt without waiting for reputation):
+
+1. Ship a **signed MSI** as the primary Windows artifact; keep the `.zip` as an
+   opt-in portable download. `scripts/package-windows.ps1` already has the WiX
+   path; it needs signing plus a run on a real Windows host.
+2. Sign **every** PE file in the payload (DLLs included), not just the entry
+   points, and timestamp each signature (`/tr http://timestamp.digicert.com
+   /fd sha256`). Sign the MSI/zip last.
+3. Keep publishing `SHA256SUMS-windows`, and submit the release to Microsoft
+   for malware scanning / reputation so SmartScreen stops re-asking.
+4. Also worth doing while in there: `Compress-Archive` in that script is slow
+   and memory-hungry at ~230 MB; the documented `/usr/bin/zip -1` path is
+   faster.
+
+Until 1–2 land, the local mitigations users can apply are a Defender exclusion
+for `%ProgramFiles%\EUnifyer Office` (or their unzipped folder) and turning off
+"Automatic sample submission" — both are user-side workarounds, not a fix.
 
 ---
 
