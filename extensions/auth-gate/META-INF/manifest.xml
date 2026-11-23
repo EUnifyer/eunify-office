@@ -3,15 +3,6 @@
     <manifest:file-entry
         manifest:full-path="python/auth_gate.py"
         manifest:media-type="application/vnd.sun.star.uno-component;type=Python"/>
-    <!-- Plain helper modules, declared the way the auth overlay declares
-         keychain.py and the drive extension declares drive_client.py, so the
-         extension framework puts them on the python path for auth_gate.py. -->
-    <manifest:file-entry
-        manifest:full-path="python/desktop_detect.py"
-        manifest:media-type="application/vnd.sun.star.uno-component;type=Python"/>
-    <manifest:file-entry
-        manifest:full-path="python/token_store.py"
-        manifest:media-type="application/vnd.sun.star.uno-component;type=Python"/>
     <manifest:file-entry
         manifest:full-path="Jobs.xcu"
         manifest:media-type="application/vnd.sun.star.configuration-data"/>

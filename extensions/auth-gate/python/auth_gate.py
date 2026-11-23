@@ -18,8 +18,8 @@ import sys
 
 import uno  # noqa: F401
 
-# Sibling module (bundled alongside this file, declared in META-INF like the
-# drive extension's drive_client.py) holding the Windows install matrix.
+# Sibling modules (bundled alongside this file, not declared in META-INF:
+# they hold no UNO components) for the Windows install matrix and tokens.
 # Degrade to the legacy single-path check rather than break startup if the
 # import ever fails.
 #
